@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - metallb.yaml
   - kubeseal.yaml
+  - gateway-api.yaml
