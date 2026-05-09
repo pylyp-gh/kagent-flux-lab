@@ -1,7 +1,26 @@
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: apps
+  name: apps-base
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/kind-lab/apps/base
+  prune: true
+  wait: true
+  dependsOn:
+    - name: infra-configs
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: agentgateway-controller
   namespace: flux-system
 spec:
   interval: 10m
@@ -10,10 +29,37 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./clusters/kind-lab/apps
+  path: ./clusters/kind-lab/apps/agentgateway/controller
   prune: true
   wait: true
   dependsOn:
-    - name: infra-configs
+    - name: apps-base
     - name: gateway-api
       namespace: gateway-api
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: agentgateway
+      namespace: agentgateway-system
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: agentgateway-crds
+      namespace: agentgateway-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: agentgateway-routes
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/kind-lab/apps/agentgateway/routes
+  prune: true
+  wait: true
+  dependsOn:
+    - name: agentgateway-controller
