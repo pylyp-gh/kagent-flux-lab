@@ -1,0 +1,12 @@
+# Copy to .envrc, fill values, then run: direnv allow .
+# .envrc is gitignored — raw keys never reach the repo.
+
+# --- LLM keys ---
+export ANTHROPIC_API_KEY=""
+
+# --- Cluster + GitOps ---
+export CLUSTER_NAME="kind-lab"
+export GITHUB_USER=""           # github username, e.g. "phsethz"
+export GITHUB_REPO="kagent-flux-lab"
+export GITHUB_BRANCH="main"
+export FLUX_PATH="clusters/${CLUSTER_NAME}"

@@ -1,0 +1,16 @@
+# direnv — keep raw API keys out of git
+.envrc
+
+# kube state
+*.kubeconfig
+kubeconfig*
+
+# OS / editor noise
+.DS_Store
+*.swp
+*.swo
+*~
+
+# scratch
+/.tmp/
+*.log
