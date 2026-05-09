@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: anthropic-api
+  namespace: kagent
+spec:
+  encryptedData:
+    ANTHROPIC_API_KEY: AgBtJogGg3Gzs3M1Plr+kKvWvp3wyd8X4upqAWCTQQ1NSsG1v8TyWbp19azfF7LKrRVXiCk47AeLvS18SbPyXw+JHhqZZxp5gy7WYc0NAmQLu6enn24Ej/xI8P80TrfU9vWLUjP5iMSLRqIiB7XNHOw1D+Nby/69ZKlham9LGTPUb3QPsPxtKDV5UpRYkVYg6rqjReA+CC7HymNlpUMuTamz6DRUH0o1jVlBbmdPLeshJ1K8oor9j3qbRaY56i6MIPtZEiG7n7xMShLu3L7bmwSmjOjwnP0GiYGZMhWC0fu40H9oB3zoMHv3W35Bd3xfyTkhDCQ2tkyx3Qo+PHEIx6nFBpzyOqL6xEVRPYX0lJNZ0jIsy7qe4dp7bvk2O7mm7G+OZ7Zr8cT8rLYx9c9L6ziM0jCFydujsvHeu+8ctSaKj68DOp2SGgAaBL8W/ypoko79GazLITkWwCPpBh2eCt4q/h8Er+CvR9mG26PL6oz0Buw2XAdVvBRtOKKo91L3R6MTJ1aZqlizaZSCPiEhzxUCggQ4cCNu9n/fk31phWC91+WhsxRPuzfWTKgCwsjr6Xxro9i865FBVeELdWD2kM6/hJY8u9H5QL0keGApcR2arG6UL+A1UU6AP/UL2yPK6qQlS24nEOwzgjGrWk0ay3s1PxgqEujNtnUK6B7jMD5xBNsCCVYFWFrcGpmO7PpwdANfEcNFMgYoXkAHwlaITEMQm4/nmi970aR8LuLz3hsZPZhaE15UzAo/hBVU2mdV4+1JrGeG7gnQ0BzfsTbFUudhOw49z8hbKSDbdxjtsVNT+Q6kf74R9iZCKCN7lDtV/eZw6vNVXfgKmuiSymk=
+  template:
+    metadata:
+      name: anthropic-api
+      namespace: kagent
