@@ -1,0 +1,43 @@
+# AgentgatewayParameters: customize proxy deployment + service via overlays.
+#
+# Goal: expose admin UI (binds 127.0.0.1:15000 inside pod) externally via MetalLB.
+# Strategy: socat sidecar container listens on 0.0.0.0:15010 and forwards to
+# 127.0.0.1:15000. Service overlay adds port 15010, MetalLB IP serves both 80 and 15010.
+#
+# ⚠️  SECURITY: admin UI exposes live xDS dump, route config, secret refs. На prod
+# додавай NetworkPolicy + auth proxy (oauth2-proxy). Lab — open.
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayParameters
+metadata:
+  name: agentgateway-proxy
+  namespace: agentgateway-system
+spec:
+  deployment:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: socat-admin
+              image: alpine/socat:latest
+              args:
+                - tcp-listen:15010,reuseaddr,fork
+                - tcp:127.0.0.1:15000
+              ports:
+                - containerPort: 15010
+                  name: admin
+                  protocol: TCP
+              resources:
+                limits:
+                  cpu: 50m
+                  memory: 32Mi
+                requests:
+                  cpu: 10m
+                  memory: 8Mi
+  service:
+    spec:
+      ports:
+        - name: admin
+          port: 15010
+          targetPort: 15010
+          protocol: TCP
