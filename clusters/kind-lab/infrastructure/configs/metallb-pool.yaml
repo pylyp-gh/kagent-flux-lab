@@ -1,3 +1,6 @@
+# NB: addresses range MUST live inside docker bridge subnet of `kind` network.
+# Docker Desktop default: 172.20.x.x; OrbStack default: 192.168.97.x.
+# Verify per environment: `docker network inspect kind --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}'`
 ---
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -6,7 +9,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 172.20.1.200-172.20.1.250
+    - 192.168.97.200-192.168.97.250
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
