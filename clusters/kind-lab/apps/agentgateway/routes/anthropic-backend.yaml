@@ -47,7 +47,7 @@ spec:
         type: PathPrefix
         value: /v1/chat/completions
     backendRefs:
-    - name: anthropic
+    - name: anthropic-completions
       namespace: agentgateway-system
       group: agentgateway.dev
       kind: AgentgatewayBackend
