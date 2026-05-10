@@ -13,6 +13,10 @@ metadata:
   name: agentgateway-proxy
   namespace: agentgateway-system
 spec:
+  # Debug logging — capture full request bodies, struct parse errors, internal trace.
+  # Cost: noisy logs (~10x volume). Lab-acceptable, prod tighten пiсля diagnosis.
+  logging:
+    level: debug
   deployment:
     spec:
       template:
