@@ -67,6 +67,14 @@ spec:
         - path:
             type: PathPrefix
             value: /ollama
+      # Strip '/ollama' prefix перш ніж forward upstream:
+      # /ollama/chat/completions → /v1/chat/completions (Ollama's OpenAI endpoint)
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /v1
       backendRefs:
         - name: ollama
           namespace: agentgateway-system
