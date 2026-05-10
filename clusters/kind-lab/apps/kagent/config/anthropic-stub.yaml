@@ -1,0 +1,23 @@
+# Placeholder Secret з fake API key.
+#
+# Кагент's Go ADK runtime requires ANTHROPIC_API_KEY env var щоб init Anthropic SDK
+# (validates env var presence, не value format).
+#
+# Real auth handled gateway-side: agentgateway's AgentgatewayBackend.policies.auth.secretRef
+# points до agentgateway-system/anthropic-secret з real key. Gateway overrides x-api-key
+# header upstream.
+#
+# Це placeholder НЕ sensitive — committed plain (не SealedSecret).
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kagent-anthropic
+  namespace: kagent
+  annotations:
+    purpose: |
+      Placeholder for kagent ADK runtime initialization.
+      Real auth lives at agentgateway-system/anthropic-secret (managed via SealedSecret).
+type: Opaque
+stringData:
+  ANTHROPIC_API_KEY: "fake-not-validated-at-init"
