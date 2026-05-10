@@ -63,7 +63,16 @@ spec:
   # postRenderer overrides label на empty string (valid K8s value).
   postRenderers:
     - kustomize:
+        # Override image tags ВСІХ chart-owned images — uses Kustomize images field
+        images:
+          - name: cr.kagent.dev/kagent-dev/kagent/controller
+            newTag: "0.9.2"
+          - name: cr.kagent.dev/kagent-dev/kagent/ui
+            newTag: "0.9.2"
+          - name: cr.kagent.dev/kagent-dev/kagent/app
+            newTag: "0.9.2"
         patches:
+          # Strip '+digest' з app.kubernetes.io/version label (set до empty)
           - target:
               kind: '.*'
               labelSelector: 'app.kubernetes.io/version'
@@ -72,6 +81,16 @@ spec:
                 path: /metadata/labels/app.kubernetes.io~1version
                 value: ""
   values:
+    # Global tag override — chart's own images use це як default
+    tag: "0.9.2"
+
+    # Explicit image tags per known component (belt-and-suspenders)
+    controller:
+      image:
+        tag: "0.9.2"
+      agentImage:
+        tag: "0.9.2"
+
     # --- Disable subcharts (per Chart.yaml dependencies conditions, top-level keys) ---
     kmcp:
       enabled: false
