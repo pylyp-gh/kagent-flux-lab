@@ -10,7 +10,9 @@ spec:
   ai:
     groups:
       - providers:
-          - name: anthropic-claude
+          # name: "*" — wildcard model match (per standalone docs `name: "*"` example)
+          # Matches any "model" value from incoming request body → routes to this provider.
+          - name: "*"
             anthropic:
               model: "claude-opus-4-6"
             policies:
