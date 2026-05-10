@@ -35,7 +35,7 @@ metadata:
 addressType: IPv4
 endpoints:
   - addresses:
-      - 192.168.97.1     # OrbStack docker bridge gateway = Mac host
+      - 10.222.222.222     # OrbStack docker bridge gateway = Mac host
 ports:
   - port: 11434
     protocol: TCP
