@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: agentgateway
+  name: agentgateway-vanila
   namespace: agentgateway-system
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: agentgateway
+      app: agentgateway-vanila
   template:
     metadata:
       labels:
-        app: agentgateway
+        app: agentgateway-vanila
     spec:
       containers:
-        - name: agentgateway
+        - name: agentgateway-vanila
           image: ghcr.io/agentgateway/agentgateway:latest
           ports:
             - containerPort: 8080  # LLM
@@ -26,16 +26,16 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: agentgateway-config
+            name: agentgateway-config-vanila
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: agentgateway
+  name: agentgateway-vanila
   namespace: agentgateway-system
 spec:
   selector:
-    app: agentgateway
+    app: agentgateway-vanila
   ports:
     - name: llm
       port: 8080
@@ -48,7 +48,7 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: agentgateway-config
+  name: agentgateway-config-vanila
   namespace: agentgateway-system
 data:
   config.yaml: |
@@ -88,7 +88,7 @@ spec:
   apiKeySecretRef:
     name: kagent-anthropic
     key: ANTHROPIC_API_KEY
-  baseUrl: http://agentgateway.agentgateway-system.svc:8080/v1
+  baseUrl: http://agentgateway-vanila.agentgateway-system.svc:8080/v1
 ---
 
 apiVersion: kagent.dev/v1alpha2
