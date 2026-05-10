@@ -24,10 +24,18 @@ spec:
     - name: agentgateway-proxy
       namespace: agentgateway-system
   rules:
+    # Multi-path matching: /anthropic (raw Anthropic format), /v1/chat/completions (OpenAI-compat),
+    # /v1/messages (Anthropic native). agentgateway translates як треба upstream.
     - matches:
         - path:
             type: PathPrefix
             value: /anthropic
+        - path:
+            type: PathPrefix
+            value: /v1/chat/completions
+        - path:
+            type: PathPrefix
+            value: /v1/messages
       backendRefs:
         - name: anthropic
           namespace: agentgateway-system

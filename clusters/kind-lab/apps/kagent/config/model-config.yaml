@@ -1,25 +1,29 @@
 ---
-# Kagent ModelConfig що pointить через agentgateway замість Anthropic API напряму.
-# Auth handled gateway-side (AgentgatewayBackend.policies.auth.secretRef → x-api-key injection).
-# kagent itself зберігає zero credentials — pure separation of concerns.
+# Kagent ModelConfig — OpenAI-compatible adapter через agentgateway.
 #
-# Якщо kagent's controller validates apiKeySecret at runtime — fallback options:
-#   1. spec.apiKeyPassthrough: true (forward incoming A2A Bearer token)
-#   2. Add dummy placeholder Secret + apiKeySecret reference (gateway overrides anyway)
+# Архітектура:
+#   kagent's OpenAI Go SDK sends standard OpenAI format request →
+#   agentgateway receives на /v1/chat/completions →
+#   AgentgatewayBackend (provider=anthropic) translates до Anthropic API format →
+#   forwards до api.anthropic.com з x-api-key (gateway-side) →
+#   Anthropic responds → gateway translates назад → kagent agent receives.
+#
+# Чому НЕ provider=Anthropic: kagent's Go ADK Anthropic SDK sends body schema
+# що agentgateway 1.1.0 не може parse ("missing field type"). OpenAI-compat path
+# uses different (newer) parsing logic у gateway → working.
 apiVersion: kagent.dev/v1alpha2
 kind: ModelConfig
 metadata:
   name: claude-via-gateway
   namespace: kagent
 spec:
-  provider: Anthropic
-  model: claude-opus-4-6
-  # kagent ADK runtime requires API key env var presence at init.
-  # Reference fake placeholder (anthropic-stub.yaml) — gateway overrides real auth.
-  apiKeySecret: kagent-anthropic
-  apiKeySecretKey: ANTHROPIC_API_KEY
-  anthropic:
-    # baseUrl з '/anthropic' prefix щоб HTTPRoute path match'нувся.
-    # Anthropic SDK appends /v1/messages → final: <baseUrl>/v1/messages
-    # → http://...service/anthropic/v1/messages → matches HTTPRoute PathPrefix /anthropic
-    baseUrl: "http://agentgateway-proxy.agentgateway-system.svc.cluster.local/anthropic"
+  # OpenAI-compatible adapter, gateway re-routes to Anthropic backend
+  provider: OpenAI
+  # Model name passed by SDK у request body. AgentgatewayBackend defines real
+  # upstream model (claude-opus-4-6). Цей field нерелевантний для routing.
+  model: gpt-4o-mini
+  apiKeySecret: kagent-openai
+  apiKeySecretKey: OPENAI_API_KEY
+  openAI:
+    # OpenAI SDK appends /v1/chat/completions автоматом → matches HTTPRoute path
+    baseUrl: "http://agentgateway-proxy.agentgateway-system.svc.cluster.local"
