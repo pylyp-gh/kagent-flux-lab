@@ -4,7 +4,7 @@ metadata:
   name: infra-controllers
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 1m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -20,7 +20,7 @@ metadata:
   name: infra-configs
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 1m
   retryInterval: 1m
   timeout: 5m
   sourceRef:

@@ -10,7 +10,7 @@ metadata:
   name: gateway-api
   namespace: agentgateway-system
 spec:
-  interval: 1h
+  interval: 1m
   url: https://github.com/kubernetes-sigs/gateway-api
   ref:
     tag: v1.5.0
@@ -23,7 +23,7 @@ metadata:
   name: gateway-api
   namespace: agentgateway-system
 spec:
-  interval: 1h
+  interval: 1m
   retryInterval: 1m
   prune: true
   wait: true

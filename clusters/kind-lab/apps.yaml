@@ -5,7 +5,7 @@ metadata:
   name: apps-base
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 1m
   retryInterval: 1m
   timeout: 5m
   sourceRef:
@@ -23,7 +23,7 @@ metadata:
   name: agentgateway-controller
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 1m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -52,7 +52,7 @@ metadata:
   name: agentgateway-routes
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 1m
   retryInterval: 1m
   timeout: 5m
   sourceRef:
@@ -70,7 +70,7 @@ metadata:
   name: kagent-controller
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 1m
   retryInterval: 1m
   timeout: 15m
   sourceRef:
