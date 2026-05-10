@@ -3,5 +3,5 @@ kind: Kustomization
 resources:
   - parameters.yaml
   - proxy.yaml
-  - anthropic-backend.yaml
-  - ollama-backend.yaml
+  # - anthropic-backend.yaml
+  # - ollama-backend.yaml
