@@ -1,4 +1,6 @@
 ---
+# AgentgatewayBackend з canonical v2.2.1 schema (groups[].providers[]) +
+# explicit promptCaching щоб enable tool-aware request handling.
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayBackend
 metadata:
@@ -6,13 +8,20 @@ metadata:
   namespace: agentgateway-system
 spec:
   ai:
-    provider:
-      anthropic:
-        model: "claude-opus-4-6"
-  policies:
-    auth:
-      secretRef:
-        name: anthropic-secret
+    groups:
+      - providers:
+          - name: anthropic-claude
+            anthropic:
+              model: "claude-opus-4-6"
+            policies:
+              auth:
+                secretRef:
+                  name: anthropic-secret
+              ai:
+                promptCaching:
+                  cacheTools: true
+                  cacheMessages: false
+                  cacheSystem: false
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -24,8 +33,6 @@ spec:
     - name: agentgateway-proxy
       namespace: agentgateway-system
   rules:
-    # Multi-path matching: /anthropic (raw Anthropic format), /v1/chat/completions (OpenAI-compat),
-    # /v1/messages (Anthropic native). agentgateway translates як треба upstream.
     - matches:
         - path:
             type: PathPrefix
