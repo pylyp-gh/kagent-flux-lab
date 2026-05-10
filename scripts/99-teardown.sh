@@ -7,10 +7,15 @@ set -euo pipefail
 CLUSTER_NAME="${CLUSTER_NAME:-kind-lab}"
 CPK_PIDFILE="/tmp/cloud-provider-kind.pid"
 
-G="\033[32m"; X="\033[0m"
-say() { echo -e "${G}==>${X} $*"; }
+G="\033[32m"; Y="\033[33m"; X="\033[0m"
+say()  { echo -e "${G}==>${X} $*"; }
+warn() { echo -e "${Y}-->${X} $*"; }
 
-# ---- Stop cloud-provider-kind ----
+# ---- Backup sealed-secrets key BEFORE delete (so reseal не потрібен на recreate) ----
+say "Backing up sealed-secrets key (if cluster reachable)..."
+bash "$(dirname "$0")/40-key-backup.sh" || warn "key backup failed (non-fatal — DR may require re-seal)"
+
+# ---- Stop cloud-provider-kind (legacy) ----
 if [ -f "$CPK_PIDFILE" ] && kill -0 "$(cat "$CPK_PIDFILE")" 2>/dev/null; then
   say "Stopping cloud-provider-kind (pid $(cat "$CPK_PIDFILE"))"
   kill "$(cat "$CPK_PIDFILE")" || true

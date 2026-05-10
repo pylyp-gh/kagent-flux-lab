@@ -1,6 +1,10 @@
 # direnv — keep raw API keys out of git
 .envrc
 
+# Sealed Secrets RSA backups — NEVER commit these (contains cluster's private key)
+*sealed-secrets-key*
+*.tls.key
+
 # kube state
 *.kubeconfig
 kubeconfig*
