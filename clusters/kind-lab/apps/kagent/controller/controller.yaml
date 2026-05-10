@@ -49,3 +49,26 @@ spec:
   install:
     remediation:
       retries: 3
+  # Workaround chart bug: Helm OCI digest augmentation appended до .Chart.Version,
+  # rendered into labels та image tags → invalid '+' char для K8s.
+  # postRenderer fixes labels (replace empty) + image tags (Kustomize images: override).
+  postRenderers:
+    - kustomize:
+        images:
+          - name: cr.kagent.dev/kagent-dev/kagent/controller
+            newTag: "0.9.2"
+          - name: cr.kagent.dev/kagent-dev/kagent/ui
+            newTag: "0.9.2"
+          - name: cr.kagent.dev/kagent-dev/kagent/app
+            newTag: "0.9.2"
+        patches:
+          - target:
+              kind: '.*'
+              labelSelector: 'app.kubernetes.io/version'
+            patch: |
+              - op: replace
+                path: /metadata/labels/app.kubernetes.io~1version
+                value: ""
+  # Default values otherwise — chart's defaults (10 agents, openAI default provider).
+  # OPENAI_API_KEY missing → default-model-config errors (1 CR), но install completes.
+  values: {}
