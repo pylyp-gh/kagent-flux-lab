@@ -1,0 +1,25 @@
+# Placeholder Secret для default OpenAI agents.
+#
+# kagent's chart enables 10 demo agents (helm-agent, k8s-agent, istio-agent, тощо)
+# що default'но використовують OpenAI provider через `default-model-config` ModelConfig
+# (referencing Secret `kagent-openai`).
+#
+# У нашому lab — реальний OpenAI key немає, не плануємо. Default agents все одно
+# create-нуть pods, які crashloop без Secret. Stub satisfies SDK init validation
+# (агенти все одно не invoke'нуться без real key — але їх init не fail).
+#
+# Реальна functionality агентів — через нашу `claude-via-gateway` ModelConfig
+# (Anthropic via agentgateway).
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kagent-openai
+  namespace: kagent
+  annotations:
+    purpose: |
+      Placeholder for default kagent demo agents (OpenAI provider).
+      No real OpenAI key — agents won't invoke successfully but pods init clean.
+type: Opaque
+stringData:
+  OPENAI_API_KEY: "fake-openai-not-validated-at-init"
