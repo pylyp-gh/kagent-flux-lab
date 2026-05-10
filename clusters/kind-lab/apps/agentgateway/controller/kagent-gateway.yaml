@@ -43,6 +43,8 @@ spec:
       port: 8081
     - name: a2a
       port: 8082
+    - name: ui
+      port: 15000
 ---
 
 apiVersion: v1
@@ -65,11 +67,6 @@ data:
         address: 0.0.0.0
         port: 8082
         protocol: A2A
-    llm:
-      providers:
-        - name: openai
-          type: openai
-          api_key_secret: openai-credentials
     security:
       authentication:
         type: kubernetes
@@ -88,7 +85,7 @@ spec:
   apiKeySecret: kagent-anthropic
   apiKeySecretKey: ANTHROPIC_API_KEY
   anthropic:
-    baseUrl: http://agentgateway-vanila.agentgateway-system.svc:8080/v1
+    baseUrl: http://agentgateway-vanila.agentgateway-system.svc.local:8080
 ---
 
 apiVersion: kagent.dev/v1alpha2
