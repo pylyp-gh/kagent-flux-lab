@@ -7,8 +7,10 @@ metadata:
 spec:
   interval: 5m
   url: oci://ghcr.io/kagent-dev/kagent/helm/kagent-crds
+  # Pin до 0.7.x — uniknayemo upstream label bug у 0.9.x (Chart.Version з '+' build metadata
+  # потрапляє у metadata.labels що invalid для Kubernetes)
   ref:
-    semver: ">=0.7.0"
+    semver: ">=0.7.0 <0.9.0"
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -35,7 +37,7 @@ spec:
   interval: 5m
   url: oci://ghcr.io/kagent-dev/kagent/helm/kagent
   ref:
-    semver: ">=0.7.0"
+    semver: ">=0.7.0 <0.9.0"
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -50,13 +52,15 @@ spec:
   chartRef:
     kind: OCIRepository
     name: kagent
+  install:
+    remediation:
+      retries: 3
   upgrade:
     strategy:
       name: RetryOnFailure
       retryInterval: 5m
   values:
-    # Minimal lab profile — vimkayemo всі pre-built demo agents
-    # (≈2.5GB memory savings; додамо custom через Agent CR пізніше)
+    # --- Disable всі pre-built demo agents (≈2.5GB memory) ---
     agents:
       argo-rollouts-agent: { enabled: false }
       cilium-debug-agent: { enabled: false }
@@ -69,15 +73,13 @@ spec:
       observability-agent: { enabled: false }
       promql-agent: { enabled: false }
 
-    # kmcp (Kubernetes MCP) — не потрібен для нашого focused use case
+    # --- Disable supporting subcharts ми не використовуємо ---
+    # (correct top-level subchart paths, не nested через 'tools')
     kmcp:
       enabled: false
-
-    # Disable Grafana MCP tool (немає Grafana в lab)
-    tools:
-      grafana-mcp:
-        enabled: false
-
-    # Залишаємо default provider openAI з placeholder secret —
-    # наша custom ModelConfig буде overrride'ити для agentgateway routing
-    # (chart's auto-generated ModelConfig стане unused — ОК)
+    kagent-tools:
+      enabled: false
+    querydoc:
+      replicas: 0
+    grafana-mcp:
+      enabled: false
