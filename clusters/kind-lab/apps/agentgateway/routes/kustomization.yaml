@@ -4,4 +4,4 @@ resources:
   - parameters.yaml
   - proxy.yaml
   - anthropic-backend.yaml
-  # - ollama-backend.yaml
+  - ollama-backend.yaml
