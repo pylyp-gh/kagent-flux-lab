@@ -4,3 +4,4 @@ resources:
   - anthropic-stub.yaml
   - openai-stub.yaml
   - model-config.yaml
+  - qwen-model-config.yaml

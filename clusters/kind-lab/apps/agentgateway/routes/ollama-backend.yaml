@@ -1,0 +1,74 @@
+# Ollama backend — local Ollama на Mac host через docker bridge gateway.
+#
+# Architecture:
+#   pod inside cluster
+#     → Service "ollama" (headless, ClusterIP=None)
+#     → EndpointSlice → 192.168.97.1:11434 (Mac host on OrbStack docker bridge)
+#     → Ollama listening 0.0.0.0:11434 (set via Ollama.app Settings or LaunchAgent)
+#
+# Чому headless Service + EndpointSlice: external IP не може бути ClusterIP target,
+# K8s не дозволяє selectors на external addresses. Headless Service + manual EndpointSlice
+# = "external service abstraction" pattern.
+#
+# AgentgatewayBackend uses provider=openai bo Ollama exposes /v1/chat/completions OpenAI-compatible API.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: agentgateway-system
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - port: 11434
+      targetPort: 11434
+      protocol: TCP
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: ollama
+  namespace: agentgateway-system
+  labels:
+    kubernetes.io/service-name: ollama
+addressType: IPv4
+endpoints:
+  - addresses:
+      - 192.168.97.1     # OrbStack docker bridge gateway = Mac host
+ports:
+  - port: 11434
+    protocol: TCP
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: ollama
+  namespace: agentgateway-system
+spec:
+  ai:
+    provider:
+      openai:
+        model: "qwen2.5:7b"
+      host: ollama.agentgateway-system.svc.cluster.local
+      port: 11434
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ollama
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - name: agentgateway-proxy
+      namespace: agentgateway-system
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ollama
+      backendRefs:
+        - name: ollama
+          namespace: agentgateway-system
+          group: agentgateway.dev
+          kind: AgentgatewayBackend

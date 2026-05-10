@@ -1,0 +1,26 @@
+---
+# Kagent ModelConfig для Ollama qwen2.5:7b через agentgateway.
+#
+# kagent's OpenAI Go SDK → gateway /ollama HTTPRoute →
+#   AgentgatewayBackend ollama (provider=openai) →
+#   Ollama на Mac host:11434 OpenAI-compat endpoint
+#
+# Чому OpenAI provider: agentgateway використовує openai тип для Ollama
+# (Ollama exposes /v1/chat/completions OpenAI-compat). kagent's OpenAI SDK
+# sends standard format — no schema mismatch.
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: qwen-via-gateway
+  namespace: kagent
+spec:
+  provider: OpenAI
+  model: "qwen2.5:7b"
+  # kagent's SDK requires OPENAI_API_KEY env var. Reference placeholder
+  # (kagent-openai Secret). Real auth не потрібна — Ollama локальний, no auth.
+  apiKeySecret: kagent-openai
+  apiKeySecretKey: OPENAI_API_KEY
+  openAI:
+    # SDK appends /v1/chat/completions → final: <baseUrl>/v1/chat/completions
+    # → /ollama/v1/chat/completions → matches HTTPRoute /ollama prefix
+    baseUrl: "http://agentgateway-proxy.agentgateway-system.svc.cluster.local/ollama"
