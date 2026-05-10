@@ -85,10 +85,10 @@ metadata:
 spec:
   provider: Anthropic
   model: claude-opus-4-6
-  apiKeySecretRef:
-    name: kagent-anthropic
-    key: ANTHROPIC_API_KEY
-  baseUrl: http://agentgateway-vanila.agentgateway-system.svc:8080/v1
+  apiKeySecret: kagent-anthropic
+  apiKeySecretKey: ANTHROPIC_API_KEY
+  anthropic:
+    baseUrl: http://agentgateway-vanila.agentgateway-system.svc:8080/v1
 ---
 
 apiVersion: kagent.dev/v1alpha2
