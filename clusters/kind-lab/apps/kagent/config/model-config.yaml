@@ -14,6 +14,10 @@ metadata:
 spec:
   provider: Anthropic
   model: claude-opus-4-6
+  # kagent ADK runtime requires API key env var presence at init.
+  # Reference fake placeholder (anthropic-stub.yaml) — gateway overrides real auth.
+  apiKeySecret: kagent-anthropic
+  apiKeySecretKey: ANTHROPIC_API_KEY
   anthropic:
     # baseUrl з '/anthropic' prefix щоб HTTPRoute path match'нувся.
     # Anthropic SDK appends /v1/messages → final: <baseUrl>/v1/messages
