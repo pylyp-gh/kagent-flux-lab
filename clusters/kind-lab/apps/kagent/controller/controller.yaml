@@ -1,0 +1,83 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: kagent-crds
+  namespace: kagent
+spec:
+  interval: 5m
+  url: oci://ghcr.io/kagent-dev/kagent/helm/kagent-crds
+  ref:
+    semver: ">=0.7.0"
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kagent-crds
+  namespace: kagent
+spec:
+  interval: 5m
+  releaseName: kagent-crds
+  chartRef:
+    kind: OCIRepository
+    name: kagent-crds
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: kagent
+  namespace: kagent
+spec:
+  interval: 5m
+  url: oci://ghcr.io/kagent-dev/kagent/helm/kagent
+  ref:
+    semver: ">=0.7.0"
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kagent
+  namespace: kagent
+spec:
+  dependsOn:
+    - name: kagent-crds
+  interval: 5m
+  releaseName: kagent
+  chartRef:
+    kind: OCIRepository
+    name: kagent
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    # Minimal lab profile — vimkayemo всі pre-built demo agents
+    # (≈2.5GB memory savings; додамо custom через Agent CR пізніше)
+    agents:
+      argo-rollouts-agent: { enabled: false }
+      cilium-debug-agent: { enabled: false }
+      cilium-manager-agent: { enabled: false }
+      cilium-policy-agent: { enabled: false }
+      helm-agent: { enabled: false }
+      istio-agent: { enabled: false }
+      k8s-agent: { enabled: false }
+      kgateway-agent: { enabled: false }
+      observability-agent: { enabled: false }
+      promql-agent: { enabled: false }
+
+    # kmcp (Kubernetes MCP) — не потрібен для нашого focused use case
+    kmcp:
+      enabled: false
+
+    # Disable Grafana MCP tool (немає Grafana в lab)
+    tools:
+      grafana-mcp:
+        enabled: false
+
+    # Залишаємо default provider openAI з placeholder secret —
+    # наша custom ModelConfig буде overrride'ити для agentgateway routing
+    # (chart's auto-generated ModelConfig стане unused — ОК)
