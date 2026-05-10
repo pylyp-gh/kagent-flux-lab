@@ -1,25 +1,38 @@
 ---
-# Kagent ModelConfig що pointить через agentgateway замість Anthropic API напряму.
-# Auth handled gateway-side (AgentgatewayBackend.policies.auth.secretRef → x-api-key injection).
-# kagent itself зберігає zero credentials — pure separation of concerns.
+# kagent ModelConfig що ходить через agentgateway з OpenAI-format payload,
+# а gateway сам транслює до Anthropic native API.
 #
-# Якщо kagent's controller validates apiKeySecret at runtime — fallback options:
-#   1. spec.apiKeyPassthrough: true (forward incoming A2A Bearer token)
-#   2. Add dummy placeholder Secret + apiKeySecret reference (gateway overrides anyway)
+# Чому provider: OpenAI а не Anthropic:
+#   agentgateway внутрішньо парсить body як OpenAI ChatCompletion схему
+#   (зокрема tool_choice — Rust untagged enum ChatCompletionToolChoiceOption).
+#   Anthropic SDK з kagent ADK шле tool_choice у формі {"type":"auto"|"any"|"tool"},
+#   що НЕ matches OpenAI варіанти ("auto"|"none"|"required"|{"type":"function",...})
+#   → серіалізатор кидає 503. З provider: OpenAI ADK генерує OpenAI body натівно
+#   → парсер задоволений → gateway translate'ить до Anthropic /v1/messages.
+#
+# Auth flow:
+#   - kagent ADK init вимагає OPENAI_API_KEY env var (зі stub Secret kagent-openai)
+#   - Реальний Anthropic ключ інжектиться gateway-side
+#     (AgentgatewayBackend anthropic-completions → policies.auth.secretRef → x-api-key)
+#   - kagent сам нічого справжнього не зберігає
 apiVersion: kagent.dev/v1alpha2
 kind: ModelConfig
 metadata:
   name: claude-via-gateway
   namespace: kagent
 spec:
-  provider: Anthropic
+  provider: OpenAI
+  # Модель ім'я переходить через gateway translation у backend → Anthropic API.
+  # AgentgatewayBackend anthropic-completions hardcode'ить claude-opus-4-6,
+  # тому field тут переважно для UI/логів kagent.
   model: claude-opus-4-6
-  # kagent ADK runtime requires API key env var presence at init.
-  # Reference fake placeholder (anthropic-stub.yaml) — gateway overrides real auth.
-  apiKeySecret: kagent-anthropic
-  apiKeySecretKey: ANTHROPIC_API_KEY
-  anthropic:
-    # baseUrl з '/anthropic' prefix щоб HTTPRoute path match'нувся.
-    # Anthropic SDK appends /v1/messages → final: <baseUrl>/v1/messages
-    # → http://...service/anthropic/v1/messages → matches HTTPRoute PathPrefix /anthropic
-    baseUrl: "http://agentgateway-proxy.agentgateway-system.svc.cluster.local/anthropic"
+  apiKeySecret: kagent-openai
+  apiKeySecretKey: OPENAI_API_KEY
+  openAI:
+    # SDK appends /v1/chat/completions → final URL:
+    #   http://agentgateway-proxy.agentgateway-system.svc.cluster.local/v1/chat/completions
+    # → matches HTTPRoute anthropic-completions (PathPrefix /v1/chat/completions)
+    # → backend anthropic-completions (provider.anthropic, claude-opus-4-6)
+    # → gateway translates OpenAI body → Anthropic native
+    # → upstream api.anthropic.com/v1/messages
+    baseUrl: "http://agentgateway-proxy.agentgateway-system.svc.cluster.local"
