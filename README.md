@@ -109,8 +109,8 @@ make flux-bootstrap   # створити GitHub репу + Flux GitOps
 
 ## Multi-cluster / test environment setup
 
-Для запуску **другого kind cluster паралельно** (e.g., для E2E testing з нуля
-без torkanya production state) встанови **три** env vars перед make:
+Для запуску **другого kind cluster паралельно** (наприклад для E2E test з нуля
+без зачіпання production state) встанови **три** env vars перед make:
 
 ```bash
 export CLUSTER_NAME=kind-lab-test       # новий kind cluster name (різний docker container)
