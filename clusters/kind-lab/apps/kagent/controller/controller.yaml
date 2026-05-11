@@ -8,9 +8,9 @@ spec:
   interval: 5m
   url: oci://ghcr.io/kagent-dev/kagent/helm/kagent-crds
   ref:
-    # 🔒 TODO (supply chain): pin до digest для prod. OCI tags mutable.
-    # crane digest oci://ghcr.io/kagent-dev/kagent/helm/kagent:0.9.2
+    # Tag + digest. Refresh: `crane digest ghcr.io/kagent-dev/kagent/helm/kagent-crds:0.9.2`
     tag: "0.9.2"
+    digest: sha256:0ce9f34bed3c035d9d9e67b62767edd3f1b632318f6e703795c3d8dcd2f4ea1d
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -33,9 +33,9 @@ spec:
   interval: 5m
   url: oci://ghcr.io/kagent-dev/kagent/helm/kagent
   ref:
-    # 🔒 TODO (supply chain): pin до digest для prod. OCI tags mutable.
-    # crane digest oci://ghcr.io/kagent-dev/kagent/helm/kagent:0.9.2
+    # Tag + digest. Refresh: `crane digest ghcr.io/kagent-dev/kagent/helm/kagent:0.9.2`
     tag: "0.9.2"
+    digest: sha256:d24b41216b4e4663dbadd778857cbb570d01155be568a7d4038f797faca10754
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease

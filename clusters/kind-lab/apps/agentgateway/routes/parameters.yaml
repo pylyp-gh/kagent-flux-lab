@@ -23,7 +23,10 @@ spec:
         spec:
           containers:
             - name: socat-admin
-              image: alpine/socat:latest
+              # Tag + digest pin — tag для human readability у logs/UI,
+              # digest для immutable identity. Registry rewrite tag → digest
+              # mismatch → kubelet pull fail (intentional safety).
+              image: alpine/socat:1.8.0.0@sha256:a6be4c0262b339c53ddad723cdd178a1a13271e1137c65e27f90a08c16de02b8
               args:
                 - tcp-listen:15010,reuseaddr,fork
                 - tcp:127.0.0.1:15000
