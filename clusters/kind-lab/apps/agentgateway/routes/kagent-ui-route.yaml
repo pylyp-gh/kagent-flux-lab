@@ -19,8 +19,12 @@ spec:
   parentRefs:
     - name: agentgateway-proxy
       namespace: agentgateway-system
+  # Multi-hostname для multi-env: kagent.lab.local (prod, MetalLB .200)
+  # + kagent2.lab.local (test cluster, MetalLB .180). DNS router точкою
+  # на відповідний IP. Wildcard cert *.lab.local матиме обидва SAN'ах.
   hostnames:
     - kagent.lab.local
+    - kagent2.lab.local
   rules:
     - backendRefs:
         - name: kagent-ui
