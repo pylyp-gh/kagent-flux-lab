@@ -4,3 +4,4 @@ resources:
   - metallb.yaml
   - kubeseal.yaml
   - gateway-api.yaml
+  - cert-manager.yaml

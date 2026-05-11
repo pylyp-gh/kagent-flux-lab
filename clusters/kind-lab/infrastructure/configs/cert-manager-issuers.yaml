@@ -1,0 +1,49 @@
+---
+# Self-signed CA pattern для lab:
+#
+# 1. selfsigned-bootstrap — ClusterIssuer що сам себе signs (це bootstrap)
+# 2. lab-ca — Certificate (root CA), signed by bootstrap → виробляє key pair у Secret
+# 3. lab-ca (ClusterIssuer) — використовує lab-ca Secret щоб signати application certs
+#
+# Browser warning'и для self-signed CA — це нормально для lab. Можна імпортувати
+# lab-ca-key-pair.crt у Keychain → trust → no more warnings (advanced).
+
+---
+# Step 1: Bootstrap issuer — self-signs anything
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-bootstrap
+spec:
+  selfSigned: {}
+
+---
+# Step 2: Root CA Certificate — signed by bootstrap → produces TLS secret
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lab-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: kind-lab Root CA
+  secretName: lab-ca-key-pair
+  duration: 8760h0m0s # 1 year
+  renewBefore: 720h0m0s # 30 days
+  privateKey:
+    algorithm: RSA
+    size: 4096
+  issuerRef:
+    name: selfsigned-bootstrap
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
+# Step 3: Real ClusterIssuer що використовує lab-ca для signing
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: lab-ca
+spec:
+  ca:
+    secretName: lab-ca-key-pair

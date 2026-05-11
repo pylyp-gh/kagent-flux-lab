@@ -6,3 +6,4 @@ resources:
   - anthropic-backend.yaml
   - ollama-backend.yaml
   - kagent-ui-route.yaml
+  - kagent-ui-cert.yaml

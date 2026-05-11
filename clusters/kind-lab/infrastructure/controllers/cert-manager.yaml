@@ -1,0 +1,51 @@
+---
+# cert-manager — provides Certificate / Issuer CRDs + reconciliation loop
+# що видає TLS секрети з обраного CA. У lab — self-signed root CA
+# (configs/cert-manager-issuers.yaml).
+#
+# Чому потрібен HTTPS: kagent UI використовує crypto.randomUUID() з Web Crypto API,
+# який доступний ТІЛЬКИ у Secure Context (HTTPS, або localhost виняток).
+# Через http://kagent.lab.local на kind-lab — insecure → API undefined → UI crash.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: jetstack
+  namespace: cert-manager
+spec:
+  interval: 1h
+  url: https://charts.jetstack.io
+  type: default
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  interval: 5m
+  releaseName: cert-manager
+  chart:
+    spec:
+      chart: cert-manager
+      version: "v1.16.x"
+      sourceRef:
+        kind: HelmRepository
+        name: jetstack
+        namespace: cert-manager
+      interval: 1h
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+  values:
+    # CRDs встановлюються через chart саме (стандартний шлях для v1.15+)
+    crds:
+      enabled: true
+      keep: true

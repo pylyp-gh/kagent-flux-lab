@@ -18,7 +18,22 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-    
+    # HTTPS listener для secure context (потрібен для crypto.randomUUID() у kagent UI).
+    # TLS terminate на gateway — клієнт ↔ gateway по TLS, gateway ↔ pod plain HTTP.
+    # Certificate kagent-lab-local-tls видає cert-manager (lab-ca ClusterIssuer).
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: kagent.lab.local
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: kagent-lab-local-tls
+      allowedRoutes:
+        namespaces:
+          from: All
+
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway

@@ -1,0 +1,19 @@
+---
+# TLS certificate для kagent.lab.local — підписується lab-ca ClusterIssuer.
+# cert-manager створить Secret kagent-lab-local-tls з tls.crt + tls.key.
+# Gateway listener HTTPS reference-ить цей Secret через certificateRefs.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kagent-lab-local
+  namespace: agentgateway-system
+spec:
+  secretName: kagent-lab-local-tls
+  duration: 2160h0m0s # 90 days
+  renewBefore: 360h0m0s # 15 days
+  dnsNames:
+    - kagent.lab.local
+  issuerRef:
+    name: lab-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
