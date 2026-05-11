@@ -1,0 +1,51 @@
+---
+# GitOps-managed тестові агенти — для smoke test обох path:
+#   flux-anthropic-test → ModelConfig claude-via-gateway → gateway → Anthropic Claude
+#   flux-ollama-test    → ModelConfig qwen-via-gateway → gateway → Mac Ollama qwen2.5:7b
+#
+# Існуючі live agents (blah, minimal2 etc.) — не торкаємось.
+# Через trust-bundle ConfigMap mounted у pods (через agent-trust-patches.yaml),
+# HTTPS до gateway works з self-signed lab-ca.
+
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: flux-anthropic-test
+  namespace: kagent
+spec:
+  type: Declarative
+  description: GitOps-managed test agent для Anthropic Claude через agentgateway
+  declarative:
+    modelConfig: claude-via-gateway
+    runtime: python
+    systemMessage: |-
+      You are a friendly Kubernetes-aware assistant deployed via Flux GitOps
+      for end-to-end testing of the agentgateway → Anthropic Claude pipeline.
+
+      # Instructions
+      - Keep responses concise and direct
+      - When asked to identify yourself, mention you're routed through agentgateway
+        to Anthropic Claude
+      - Format responses as Markdown
+    tools: []
+
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: flux-ollama-test
+  namespace: kagent
+spec:
+  type: Declarative
+  description: GitOps-managed test agent для Ollama qwen2.5 через agentgateway
+  declarative:
+    modelConfig: qwen-via-gateway
+    runtime: python
+    systemMessage: |-
+      You are a lightweight assistant powered by Ollama qwen2.5:7b running on
+      a local Mac host, accessed via agentgateway in the kind-lab cluster.
+
+      # Instructions
+      - Keep responses concise — running on small local model
+      - Format responses as Markdown
+    tools: []
