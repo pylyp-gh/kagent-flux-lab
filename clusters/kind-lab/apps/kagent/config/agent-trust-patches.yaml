@@ -1,0 +1,255 @@
+---
+# Trust injection для chart-managed Agent CRDs (HTTPS до agentgateway).
+#
+# Чому окремий yaml а не у HelmRelease postRenderer:
+#   Helm-controller's Server-Side Apply на згенеровані Agent CRDs **не** клаїмить
+#   ownership за spec.declarative.deployment.* fields (хоч postRenderer їх render-ить
+#   у manifest). Тому при kagent controller's наступному client-side Update PUT
+#   операція дроп deployment field.
+#
+# Цей файл деплоїться через kagent-config Flux Kustomization, який runs AFTER
+# kagent-controller HelmRelease. kustomize-controller SSA з власним field manager
+# клаїмить deployment.env/volumes/volumeMounts → kagent controller не може дроп.
+#
+# Agents, які реально потребують trust (ходять через https://agentgateway-proxy.../...):
+#   - cilium-debug-agent, k8s-agent (claude-via-gateway → real Anthropic)
+# Решта — patch йде на запас (no harm), якщо у майбутньому переключити їх ModelConfig.
+
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: k8s-agent
+  namespace: kagent
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
+
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: cilium-debug-agent
+  namespace: kagent
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
+
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: cilium-manager-agent
+  namespace: kagent
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
+
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: cilium-policy-agent
+  namespace: kagent
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
+
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: helm-agent
+  namespace: kagent
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
+
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: istio-agent
+  namespace: kagent
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
+
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: kgateway-agent
+  namespace: kagent
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
+
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: observability-agent
+  namespace: kagent
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
+
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: promql-agent
+  namespace: kagent
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
+
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: argo-rollouts-conversion-agent
+  namespace: kagent
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt

@@ -6,3 +6,4 @@ resources:
   - model-config.yaml
   - qwen-model-config.yaml
   - kagent-ui-lb.yaml
+  - agent-trust-patches.yaml
