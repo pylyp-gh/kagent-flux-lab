@@ -1,9 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-# Stub Secrets що kagent ADK pods читають при init.
-# Applied EARLY (kagent-stubs Flux Kustomization, перед kagent-controller HelmRelease)
-# щоб present до того як Helm install spawn'ить Agent CRDs → pods.
-# Без цього splitу — deadlock: Helm чекає pods Ready, pods чекають Secret, Secret
-# у kagent-config який чекає controller.
+# Stub Secrets read by kagent ADK pods on init.
+# Applied EARLY (kagent-stubs Flux Kustomization, before kagent-controller HelmRelease)
+# so they're present before Helm install spawns Agent CRDs → pods.
+# Without this split — deadlock: Helm waits for pods Ready, pods wait for Secret, Secret
+# in kagent-config which waits for controller.
 resources:
   - openai-stub.yaml

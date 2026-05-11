@@ -1,0 +1,28 @@
+# Single Strategic Merge Patch targeted at every Agent with label
+# lab.cert-trust=enabled. Replaces the previous 10× copy-paste in
+# agent-trust-patches.yaml — change cert path in one place now.
+#
+# kustomize-controller applies via SSA with its own field manager → ownership
+# of spec.declarative.deployment.{env,volumeMounts,volumes} is claimed
+# explicitly, surviving kagent controller's subsequent client-side Update.
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: placeholder  # name overridden by patch target match
+spec:
+  declarative:
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt

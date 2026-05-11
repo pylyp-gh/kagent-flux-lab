@@ -1,13 +1,13 @@
 ---
-# trust-manager Bundle — об'єднує lab-ca + system CAs у єдиний bundle,
-# розповсюджується як ConfigMap у вибрані ns.
+# trust-manager Bundle — merges lab-ca + system CAs into a single bundle,
+# distributed as a ConfigMap to selected namespaces.
 #
 # Sources:
-#   - useDefaultCAs: true — Mozilla system CA bundle (для HTTPS до external endpoints)
-#   - secret: lab-ca-key-pair — наш self-signed CA з cert-manager ns
+#   - useDefaultCAs: true — Mozilla system CA bundle (for HTTPS to external endpoints)
+#   - secret: lab-ca-key-pair — our self-signed CA from the cert-manager ns
 #
-# Target: ConfigMap lab-ca-bundle ключ ca.crt у ns kagent + agentgateway-system.
-# Namespace selection через built-in label kubernetes.io/metadata.name.
+# Target: ConfigMap lab-ca-bundle key ca.crt in ns kagent + agentgateway-system.
+# Namespace selection via built-in label kubernetes.io/metadata.name.
 apiVersion: trust.cert-manager.io/v1alpha1
 kind: Bundle
 metadata:

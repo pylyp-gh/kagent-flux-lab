@@ -37,8 +37,8 @@ SUBNET_V4=$(docker network inspect kind --format '{{range .IPAM.Config}}{{if not
 SUBNET_V4=$(docker network inspect kind --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}' | tr ' ' '\n' | grep -v ':' | head -1)
 echo "  IPv4 subnet : ${SUBNET_V4:-unknown}"
 echo "  Reserved    : $(docker network inspect kind --format '{{range .Containers}}{{.IPv4Address}} {{end}}' | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ' ')"
-warn "MetalLB pool у Phase 4 беремо з high-range цього subnet (default: 172.20.1.200-250)"
+warn "MetalLB pool must live within this subnet — verify clusters/kind-lab/infrastructure/configs/metallb-pool.yaml"
 
 echo
-say "Cluster ready. LoadBalancer IPs not yet available — MetalLB деплоїться у Phase 4."
+say "Cluster ready. LoadBalancer IPs come up once MetalLB deploys via Flux."
 say "Next: make flux-bootstrap"

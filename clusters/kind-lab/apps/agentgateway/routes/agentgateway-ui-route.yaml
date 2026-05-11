@@ -1,7 +1,7 @@
 ---
-# HTTPRoute для agentgateway admin UI через HTTPS на тому самому Gateway.
-# Hostname agentgateway.lab.local → Service agentgateway-proxy:15010 (admin port).
-# Admin endpoint обслуговується socat sidecar (port 15010 → 15000 на localhost).
+# HTTPRoute for the agentgateway admin UI via HTTPS on the shared Gateway.
+# Hostname agentgateway.ash.ph.lab → Service agentgateway-proxy:15010 (admin port).
+# Admin endpoint served by the socat sidecar (port 15010 → 15000 on localhost in pod).
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -11,12 +11,12 @@ spec:
   parentRefs:
     - name: agentgateway-proxy
       namespace: agentgateway-system
-  # Multi-hostname: підтримує як prod-style (agentgateway.lab.local) так і
-  # test cluster дubль (agentgateway2.lab.local). На DNS router різні
-  # hostnames точкою на різні MetalLB IPs (.200 для prod, .180 для test).
+  # Multi-hostname: supports both prod-style (agentgateway.ash.ph.lab) and
+  # test cluster duplicate (agentgateway2.ash.ph.lab). DNS on router points
+  # different hostnames to different MetalLB IPs (.200 for prod, .180 for test).
   hostnames:
-    - agentgateway.lab.local
-    - agentgateway2.lab.local
+    - agentgateway.ash.ph.lab
+    - agentgateway2.ash.ph.lab
   rules:
     - backendRefs:
         - name: agentgateway-proxy

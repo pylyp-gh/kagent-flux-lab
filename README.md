@@ -2,17 +2,17 @@
 
 End-to-end GitOps lab: **kind/OrbStack** → **Flux CD** → **Sealed Secrets** →
 **cert-manager + trust-manager** → **MetalLB** → **Gateway API + agentgateway**
-→ **kagent** → **Anthropic Claude / Ollama**. Все HTTPS-only через єдиний
-`agentgateway` ingress.
+→ **kagent** → **Anthropic Claude / Ollama**. Everything HTTPS-only through a
+single `agentgateway` ingress.
 
-Ціль — мінімум ручної роботи, максимум через `make` + git push. Все інфра-стан
-декларативно живе в окремій GitHub репі, керується Flux.
+Goal — minimum manual work, everything via `make` + git push. All infra state
+lives declaratively in a separate GitHub repo, reconciled by Flux.
 
-## Топологія
+## Topology
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  kind cluster (3 nodes на OrbStack)                              │
+│  kind cluster (2 nodes on OrbStack: 1 control-plane + 1 worker) │
 │                                                                  │
 │  ┌───────────────────────────────────────────────────────────┐   │
 │  │  Flux CD ◄──── git push ──── GitHub repo                  │   │
@@ -22,11 +22,11 @@ End-to-end GitOps lab: **kind/OrbStack** → **Flux CD** → **Sealed Secrets** 
 │  │     ├─► gateway-api CRDs (v1.5.0 experimental)            │   │
 │  │     ├─► cert-manager + trust-manager                      │   │
 │  │     │     └─► lab-ca self-signed Root CA                  │   │
-│  │     │     └─► wildcard cert *.lab.local + in-cluster SANs │   │
-│  │     │     └─► Bundle → ConfigMap у kagent + agentgateway  │   │
+│  │     │     └─► wildcard cert *.ash.ph.lab + in-cluster SANs │   │
+│  │     │     └─► Bundle → ConfigMap in kagent + agentgateway │   │
 │  │     ├─► agentgateway (LLM proxy + Gateway API impl)       │   │
 │  │     │     └─► AgentgatewayBackend: anthropic + ollama     │   │
-│  │     │     └─► HTTPS-only listener (HTTP видалений)        │   │
+│  │     │     └─► HTTPS-only listener (HTTP removed)          │   │
 │  │     │     └─► HTTPRoute: kagent-ui, agentgateway-ui,      │   │
 │  │     │           anthropic, anthropic-completions, ollama  │   │
 │  │     └─► kagent (agent framework)                          │   │
@@ -37,120 +37,129 @@ End-to-end GitOps lab: **kind/OrbStack** → **Flux CD** → **Sealed Secrets** 
 │                                                                  │
 │  Single MetalLB IP 192.168.97.200 → agentgateway-proxy           │
 │  ▼ TLS terminate ▼ HTTPRoute SNI/path routing                    │
-│     • https://kagent.lab.local       → kagent-ui Service         │
-│     • https://agentgateway.lab.local → agentgateway-proxy:15010  │
+│     • https://kagent.ash.ph.lab       → kagent-ui Service         │
+│     • https://agentgateway.ash.ph.lab → agentgateway-proxy:15010  │
 │     • https://...local/v1/messages   → AgentgatewayBackend       │
 │     • https://...local/ollama/...    → Mac host Ollama           │
 └──────────────────────────────────────────────────────────────────┘
                               │
                               ▼
-            api.anthropic.com (через gateway) │ Mac host Ollama 11434
+       api.anthropic.com (TLS) │ Mac host Ollama 11434 (plain HTTP)
+       both via agentgateway with translation/forwarding
 ```
 
 ## Networking & TLS
 
-**Один Service `LoadBalancer` на весь stack** — `agentgateway-proxy` тримає один
-MetalLB IP `192.168.97.200`. Усі HTTP(S) запити (від browser до UI, від
-in-cluster pod до моделі) проходять через цей gateway. Це **production inspired
-pattern** — `agentgateway` грає роль ingress + LLM router водночас.
+**One `LoadBalancer` Service for the whole stack** — `agentgateway-proxy` holds
+a single MetalLB IP `192.168.97.200`. All HTTP(S) traffic (browser → UI,
+in-cluster pod → model) flows through this gateway. It's a **production-
+inspired pattern** — `agentgateway` plays the role of ingress + LLM router at
+the same time.
 
-**HTTPS-only.** Browser потребує Secure Context для Web Crypto API
-(`crypto.randomUUID()` у Next.js UI). Тому HTTP listener видалено повністю —
-`http://` reach до port 80 timeout-ить. Cert підписаний self-signed CA (`lab-ca`
-ClusterIssuer); browser показує warning один раз → accept.
+**HTTPS-only.** Browsers require Secure Context for the Web Crypto API
+(`crypto.randomUUID()` in the Next.js UI). So the HTTP listener was removed
+entirely — `http://` to port 80 just times out. Cert signed by self-signed CA
+(`lab-ca` ClusterIssuer); the browser shows a warning once → accept.
 
-**In-cluster TLS trust.** kagent agent pods ходять до моделі через
-`https://agentgateway-proxy.agentgateway-system.svc.cluster.local`. Cert має
-extended SANs для in-cluster Service DNS (всі варіанти від короткого hostname до
-FQDN). Pods читають lab-ca через **trust-manager Bundle** → ConfigMap у `kagent`
-ns → mounted у pod → `SSL_CERT_FILE` env. Python httpx бачить bundle, TLS
-handshake проходить.
+**In-cluster TLS trust.** kagent agent pods reach the model via
+`https://agentgateway-proxy.agentgateway-system.svc.cluster.local`. The cert has
+extended SANs for in-cluster Service DNS (all variants from short hostname to
+FQDN). Pods read lab-ca via **trust-manager Bundle** → ConfigMap in the `kagent`
+ns → mounted into pod → `SSL_CERT_FILE` env. Python httpx sees the bundle, TLS
+handshake succeeds.
 
-**DNS на home router** — `kagent.lab.local` і `agentgateway.lab.local`
-резолвлять у `192.168.97.200` (MetalLB IP) на всіх пристроях у LAN.
+**DNS on home router** — `kagent.ash.ph.lab` and `agentgateway.ash.ph.lab`
+resolve to `192.168.97.200` (MetalLB IP) on all devices in the LAN.
 
-## agentgateway як єдиний ingress
+## agentgateway as the single ingress
 
-Один Gateway resource `agentgateway-proxy` обслуговує:
+One Gateway resource `agentgateway-proxy` serves:
 
-- **UI traffic** (HTTPRoute з `backendRef.kind=Service`) — kagent UI, gateway
+- **UI traffic** (HTTPRoute with `backendRef.kind=Service`) — kagent UI, gateway
   admin UI
-- **LLM API traffic** (HTTPRoute з `backendRef.kind=AgentgatewayBackend`) —
+- **LLM API traffic** (HTTPRoute with `backendRef.kind=AgentgatewayBackend`) —
   Anthropic Messages, Anthropic-flavored OpenAI completions, Ollama
 
-Hostname-based routing розводить UI vs API:
+Hostname-based routing splits UI from API:
 
-- `*.lab.local` SNI → wildcard cert
-- HTTPRoutes з конкретним `hostnames:` claim'аяють свій subdomain
-- HTTPRoutes без `hostnames:` (anthropic, ollama) ловлять in-cluster requests
-  через Service DNS
+- `*.ash.ph.lab` SNI → wildcard cert
+- HTTPRoutes with explicit `hostnames:` claim their subdomain
+- HTTPRoutes without `hostnames:` (anthropic, ollama) catch in-cluster requests
+  via Service DNS
 
-Це **replaces traditional ingress controller** (nginx-ingress, traefik) + **LLM
-proxy layer** (LiteLLM, OpenRouter) у одну сутність. Trade-off — менше гнучкості
-ніж окремі шари, але швидше для lab.
+This **replaces a traditional ingress controller** (nginx-ingress, traefik) +
+**LLM proxy layer** (LiteLLM, OpenRouter) with a single component. Trade-off —
+less flexibility than separate layers, but faster for a lab.
 
 ## Quick start
 
 ```bash
 cp .envrc.example .envrc
-# заповни ANTHROPIC_API_KEY, GITHUB_USER
+# fill in ANTHROPIC_API_KEY, GITHUB_USER
 direnv allow .
 
-make prereqs          # перевірити tools, gh auth, env
-make cluster-up       # kind + MetalLB-ready network
-make flux-bootstrap   # створити GitHub репу + Flux GitOps
-# далі — все через git push у Flux репу
+make prereqs          # check tools, gh auth, env vars
+make cluster-up       # kind + MetalLB-ready network (auto-restores sealed-secrets RSA if backup exists)
+make flux-bootstrap   # create GitHub repo + Flux GitOps
+# from here — everything via git push to the Flux repo
 
-# після bootstrap (~5 min reconcile):
-# 1. додати DNS на router: kagent.lab.local + agentgateway.lab.local → MetalLB IP
-# 2. (опційно) додати lab-ca cert у Keychain trust → не побачиш browser warning
+# IF first time (no RSA backup at ~/.sealed-secrets-keys/<cluster>.yaml):
+#   make seal             # re-seal anthropic-secret with the current cluster's RSA
+#   git add clusters/kind-lab/apps/base/sealed/anthropic.yaml && git commit && git push
+# Otherwise Flux will sync the existing SealedSecret which the cluster can't decrypt.
+
+# after bootstrap (~5 min reconcile):
+# 1. add DNS on router: kagent.ash.ph.lab + agentgateway.ash.ph.lab → MetalLB IP
+# 2. (optional) add lab-ca cert to Keychain trust → no browser warning
 ```
 
 ## Multi-cluster / test environment setup
 
-Для запуску **другого kind cluster паралельно** (e.g., для E2E testing з нуля
-без torkanya production state) встанови **три** env vars перед make:
+To run a **second kind cluster in parallel** (e.g., for E2E testing from scratch
+without touching production state) set **three** env vars before make:
 
 ```bash
-export CLUSTER_NAME=kind-lab-test       # новий kind cluster name (різний docker container)
-export GITHUB_BRANCH=test-e2e            # окремий git branch для test config tweaks
-export FLUX_PATH=clusters/kind-lab       # GitOps tree path (той самий що prod!)
+export CLUSTER_NAME=kind-lab-test       # new kind cluster name (different docker container)
+export GITHUB_BRANCH=test-e2e            # separate git branch for test config tweaks
+export FLUX_PATH=clusters/kind-lab       # GitOps tree path (same as prod!)
 ```
 
-**Чому FLUX_PATH explicit:** `CLUSTER_NAME` і `FLUX_PATH` — **різні concepts**:
+**Why FLUX_PATH explicit:** `CLUSTER_NAME` and `FLUX_PATH` are **separate
+concepts**:
 
 - `CLUSTER_NAME` — runtime identifier (kind container name, kubectl context).
-- `FLUX_PATH` — storage identity (де у git живуть manifests).
+- `FLUX_PATH` — storage identity (where in git the manifests live).
 
-Бутстрап-скрипт default'но точкою на `clusters/kind-lab` (наш канонічний tree),
-**не** на derived `clusters/${CLUSTER_NAME}`. Для multi-cluster setup це
-дозволяє reuse того самого GitOps tree через **branch tweaks** (e.g., test-e2e
-branch має MetalLB slice 192.168.97.180-199 замість prod .200-250 + kind
-apiServerPort 6444 замість 6443).
+The bootstrap script defaults to `clusters/kind-lab` (our canonical tree),
+**not** to `clusters/${CLUSTER_NAME}`. For multi-cluster setup that lets you
+reuse the same GitOps tree via **branch tweaks** (e.g., test-e2e branch has
+MetalLB slice 192.168.97.180-199 instead of prod .200-250 + kind apiServerPort
+6444 instead of 6443).
 
-Додатково потрібен tweak у test branch (вже зроблено):
+Additionally needed tweaks in the test branch (already done):
 
 - `clusters/kind-lab/infrastructure/configs/metallb-pool.yaml` — IP slice
-  non-overlap з prod.
-- `kind/cluster.yaml` — different cluster name + apiServerPort щоб не
-  конфліктувати з main's 6443.
+  non-overlap with prod.
+- `kind/cluster.yaml` — different cluster name + apiServerPort to avoid conflict
+  with main's 6443.
 
-Після cluster-up + flux-bootstrap test cluster reconciles той самий GitOps tree
-як prod, але з branch-specific tweaks. Demonstrates GitOps **branch-per-env**
-pattern (на відміну від path-per-env де у git є окрема директорія per cluster).
+After cluster-up + flux-bootstrap the test cluster reconciles the same GitOps
+tree as prod, but with branch-specific tweaks. Demonstrates GitOps
+**branch-per-env** pattern (as opposed to path-per-env where git has a separate
+directory per cluster).
 
 ## Make targets
 
-| target                | що робить                                           |
-| --------------------- | --------------------------------------------------- |
-| `make prereqs`        | перевірка tools, gh auth, env vars                  |
-| `make cluster-up`     | створити kind cluster на OrbStack subnet            |
-| `make flux-bootstrap` | gh repo create + flux bootstrap github              |
-| `make seal`           | kubeseal helper для секретів (stdin → SealedSecret) |
-| `make status`         | nodes + flux state                                  |
-| `make cluster-down`   | прибрати все                                        |
+| target                | what it does                                       |
+| --------------------- | -------------------------------------------------- |
+| `make prereqs`        | check tools, gh auth, env vars                     |
+| `make cluster-up`     | create kind cluster on OrbStack subnet             |
+| `make flux-bootstrap` | gh repo create + flux bootstrap github             |
+| `make seal`           | kubeseal helper for secrets (stdin → SealedSecret) |
+| `make status`         | nodes + flux state                                 |
+| `make cluster-down`   | tear down everything                               |
 
-## Структура
+## Structure
 
 ```
 .
@@ -158,6 +167,8 @@ pattern (на відміну від path-per-env де у git є окрема д�
 ├── kind/cluster.yaml                 # kind cluster spec
 └── clusters/kind-lab/                # GitOps tree
     ├── flux-system/                  # auto-generated by flux bootstrap
+    ├── infrastructure.yaml           # Flux Kustomizations: infra-controllers, infra-configs
+    ├── apps.yaml                     # Flux Kustomizations: apps-base, *-controller, *-config, kagent-stubs
     ├── infrastructure/
     │   ├── controllers/              # Helm: sealed-secrets, metallb,
     │   │                             #       cert-manager, trust-manager,
@@ -165,58 +176,71 @@ pattern (на відміну від path-per-env де у git є окрема д�
     │   └── configs/                  # IPAddressPool, L2Advertisement,
     │                                 #   Issuers, trust Bundle
     └── apps/
+        ├── base/                     # Namespace defs + SealedSecret(s)
+        │   ├── namespaces.yaml
+        │   └── sealed/anthropic.yaml
         ├── agentgateway/
         │   ├── controller/           # agentgateway HelmRelease
         │   └── routes/               # Gateway, HTTPRoutes,
         │                             #   AgentgatewayBackends,
         │                             #   wildcard Certificate
         └── kagent/
-            ├── controller/           # kagent HelmRelease з postRenderer
-            └── config/               # ModelConfigs, Secret stubs,
-                                      #   Agent trust patches,
+            ├── controller/           # kagent HelmRelease with postRenderer
+            ├── stubs/                # stub Secrets (applied EARLY,
+            │                         #   before kagent HelmRelease — secret-before-pod)
+            └── config/               # ModelConfigs, Agent trust patches,
                                       #   git-managed test agents
 ```
 
 ## Why these choices
 
-- **kind + OrbStack** замість Docker Desktop: чистіший Mac↔cluster networking,
-  MetalLB L2 mode працює без проблем (Docker Desktop ARP-чорнота).
-- **Sealed Secrets** замість External Secrets/VSO: один controller, kubeseal
-  CLI, RSA-encrypted secrets можна commit'ити в Git. Auto-backup RSA pair скрипт
-  — survive cluster recreate.
-- **cert-manager + trust-manager** замість manual cert mounts: declarative CA +
-  automatic Bundle distribution. Single source of truth для TLS у lab.
-- **agentgateway** як LLM proxy: provider abstraction, native Gateway API,
-  policy hooks (auth, rate limit). У lab — також ingress role.
-- **provider=OpenAI у ModelConfigs** (через gateway translation до Anthropic):
-  workaround agentgateway tool_choice parser bug. Кagent ADK генерує
-  OpenAI-format body → gateway translate → Anthropic native → 200 OK.
-- **Ollama як headless Service + EndpointSlice**: cluster-internal abstraction
-  над Mac host IP. Pods думають що це звичайний Service, з MetalLB pool
+- **kind + OrbStack** instead of Docker Desktop: cleaner Mac↔cluster networking,
+  MetalLB L2 mode just works (Docker Desktop ARP black-hole avoided).
+- **Sealed Secrets** instead of External Secrets/VSO: one controller, kubeseal
+  CLI, RSA-encrypted secrets committed to git. Auto-backup RSA pair script —
+  survives cluster recreate.
+- **cert-manager + trust-manager** instead of manual cert mounts: declarative
+  CA + automatic Bundle distribution. Single source of truth for TLS in lab.
+- **agentgateway** as LLM proxy: provider abstraction, native Gateway API,
+  policy hooks (auth, rate limit). In lab — also plays the ingress role.
+- **provider=OpenAI in ModelConfigs** (with gateway translation to Anthropic):
+  workaround for agentgateway tool_choice parser bug. kagent ADK generates
+  OpenAI-format body → gateway translates → Anthropic native → 200 OK.
+- **Ollama as headless Service + EndpointSlice**: cluster-internal abstraction
+  over Mac host IP. Pods see a regular Service from the MetalLB pool's
   perspective.
 
 ## Known limitations (lab-specific)
 
-- **Self-signed CA** — browsers warn першого разу, accept once. Не варто
-  переносити у prod без real CA (Let's Encrypt + ExternalDNS).
-- **NetworkPolicy відсутня** — agent pods можуть досягати будь-чого в кластері.
-  Production додав би zone separation через CNI policies.
-- **Fake API keys у stub Secrets** — `kagent-openai` має
-  `fake-not-validated-at-init` бо real auth йде gateway-side. Це pragmatic для
-  lab, але антипаттерн якщо pod коли-небудь обходитиме gateway.
-- **Default Pod Security Standards** — kagent agents run з permissive PSS.
-  Restricted PSS би вимагала extra config.
-- **DNS вручну на router** — без ExternalDNS controller. У prod-стилі lab додав
-  би external-dns + RFC2136 чи cloud provider.
-- **agentgateway admin UI exposed без auth** — `https://agentgateway.lab.local`
-  віддає live xDS dump, route config, secret refs усім хто резолвить DNS.
-  Свідомо лишено у lab — admin UI зручний для debugging architecture. Для prod:
-  OAuth2-proxy + OIDC (GitHub/Google) перед HTTPRoute, або зовсім видалити
-  HTTPRoute і access тільки через `kubectl port-forward`.
-- **OCI image tags замість digest pinning** — `agentgateway:v2.2.1`,
-  `kagent:0.9.2` mutable tags. Registry rewrite → інший image at reconcile. Для
-  prod: `crane digest oci://...` → `ref.digest: sha256:...` у OCIRepository.
-- **`provider: OpenAI` як workaround agentgateway tool_choice parser bug** — ADK
-  генерує OpenAI body → gateway translate до Anthropic native. Це навмисний
-  обхід. Track upstream issue для повернення до `provider: Anthropic` якщо bug
-  буде виправлений.
+- **Self-signed CA** — browsers warn on first visit, accept once. Don't carry to
+  prod without a real CA (Let's Encrypt + ExternalDNS).
+- **NetworkPolicy absent** — agent pods can reach anything in the cluster.
+  Production would add zone separation via CNI policies.
+- **Fake API keys in stub Secrets** — `kagent-openai` has
+  `fake-not-validated-at-init` because real auth happens gateway-side. Pragmatic
+  for lab, but anti-pattern if a pod ever bypasses the gateway.
+- **Default Pod Security Standards** — kagent agents run with permissive PSS.
+  Restricted PSS would need extra config.
+- **DNS by hand on the router** — no ExternalDNS controller. A prod-style lab
+  would add external-dns + RFC2136 or cloud provider.
+- **agentgateway admin UI exposed without auth** —
+  `https://agentgateway.ash.ph.lab` serves live xDS dump, route config, secret
+  refs to anyone who resolves DNS. Intentionally kept in lab — admin UI is handy
+  for debugging architecture. For prod: OAuth2-proxy + OIDC (GitHub/Google) in
+  front of HTTPRoute, or remove HTTPRoute entirely and access only via
+  `kubectl port-forward`.
+- **`provider: OpenAI` as workaround for agentgateway tool_choice parser bug** —
+  ADK generates OpenAI body → gateway translates to Anthropic native.
+  Intentional workaround. Track the upstream issue for returning to
+  `provider: Anthropic` once the bug is fixed.
+- **Single-replica deployments without PodDisruptionBudget** — `kubectl drain`
+  or node maintenance triggers downtime. Production would add `replicas: 2+`
+  - `PDB minAvailable: 1` for all stateless components.
+- **Permanent `debug` logging in agentgateway** — full request bodies (with API
+  keys, prompts) in stdout. Convenient for lab troubleshooting, but production
+  should route logs via a collector with redaction (cosign-style downstream
+  filtering) before storage.
+- **Single-replica MetalLB controller + speaker per worker** — single point of
+  LB IP allocation failure. Multi-replica + leader election preferred in prod.
+- **No observability stack** (Prometheus, OTel, Grafana, Loki). Phase 12+ — add
+  OTel Collector + log redaction.

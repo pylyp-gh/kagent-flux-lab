@@ -1,0 +1,28 @@
+---
+# Wildcard certificate for all *.ash.ph.lab hostnames.
+# One Secret serves the kagent UI, agentgateway admin UI, and any future sub-domains.
+# Signed by the lab-ca ClusterIssuer (self-signed root, infrastructure/configs).
+#
+# Gateway listener https uses this cert + hostname "*.ash.ph.lab" — SNI matches all sub-domains.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ash-ph-lab-wildcard
+  namespace: agentgateway-system
+spec:
+  secretName: ash-ph-lab-wildcard-tls
+  duration: 2160h0m0s # 90 days
+  renewBefore: 360h0m0s # 15 days
+  dnsNames:
+    - "*.ash.ph.lab"
+    - "ash.ph.lab"
+    # In-cluster Service DNS — for kagent agent pods that reach the Service directly
+    # (no external DNS hop via router).
+    - "agentgateway-proxy.agentgateway-system.svc.cluster.local"
+    - "agentgateway-proxy.agentgateway-system.svc"
+    - "agentgateway-proxy.agentgateway-system"
+    - "agentgateway-proxy"
+  issuerRef:
+    name: lab-ca
+    kind: ClusterIssuer
+    group: cert-manager.io

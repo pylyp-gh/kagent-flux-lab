@@ -1,15 +1,15 @@
 ---
-# Експозиція kagent UI через існуючий agentgateway-proxy listener.
-# Hostname-based routing — той самий LoadBalancer IP (192.168.97.200),
-# різний Host header → різний backend.
+# Expose the kagent UI via the shared agentgateway-proxy HTTPS listener.
+# Hostname-based routing — same MetalLB LB IP (192.168.97.200),
+# different SNI/Host → different backend.
 #
-# Доступ: додати у /etc/hosts на хості:
-#   192.168.97.200 kagent.lab.local
-# Тоді: http://kagent.lab.local
+# Access: DNS on router → kagent.ash.ph.lab → 192.168.97.200.
+# Then: https://kagent.ash.ph.lab (browser will warn about
+# self-signed CA on first visit — accept once; trust permanently via lab-ca cert in Keychain).
 #
-# kagent-ui Service — звичайний K8s Service (kind=Service default).
-# agentgateway controller поважає стандартні Gateway API backendRef'и,
-# не тільки власні AgentgatewayBackend CRD.
+# kagent-ui Service — standard K8s Service (kind=Service default).
+# agentgateway controller respects standard Gateway API backendRefs,
+# not only its own AgentgatewayBackend CRDs.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -19,12 +19,12 @@ spec:
   parentRefs:
     - name: agentgateway-proxy
       namespace: agentgateway-system
-  # Multi-hostname для multi-env: kagent.lab.local (prod, MetalLB .200)
-  # + kagent2.lab.local (test cluster, MetalLB .180). DNS router точкою
-  # на відповідний IP. Wildcard cert *.lab.local матиме обидва SAN'ах.
+  # Multi-hostname for multi-env: kagent.ash.ph.lab (prod, MetalLB .200)
+  # + kagent2.ash.ph.lab (test cluster, MetalLB .180). DNS router points to
+  # the respective IP. Wildcard cert *.ash.ph.lab covers both SANs.
   hostnames:
-    - kagent.lab.local
-    - kagent2.lab.local
+    - kagent.ash.ph.lab
+    - kagent2.ash.ph.lab
   rules:
     - backendRefs:
         - name: kagent-ui

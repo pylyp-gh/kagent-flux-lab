@@ -1,0 +1,91 @@
+# Minimal Agent stubs marking chart-managed agents that should receive the
+# trust patch (SSL_CERT_FILE + lab-ca-bundle volume). Kustomize uses the
+# label `lab.cert-trust=enabled` as a target selector — the patch
+# (agent-trust-patch.yaml) merges deployment.{env,volumes,volumeMounts}
+# into each.
+#
+# Why a separate Flux Kustomization (kagent-config) instead of HelmRelease
+# postRenderer: helm-controller SSA doesn't claim ownership of the
+# spec.declarative.deployment field, so kagent controller's next client-side
+# Update drops it. Applying via kustomize-controller (own field manager)
+# makes ownership conflict-free and persistent.
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: k8s-agent
+  namespace: kagent
+  labels:
+    lab.cert-trust: enabled
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: cilium-debug-agent
+  namespace: kagent
+  labels:
+    lab.cert-trust: enabled
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: cilium-manager-agent
+  namespace: kagent
+  labels:
+    lab.cert-trust: enabled
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: cilium-policy-agent
+  namespace: kagent
+  labels:
+    lab.cert-trust: enabled
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: helm-agent
+  namespace: kagent
+  labels:
+    lab.cert-trust: enabled
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: istio-agent
+  namespace: kagent
+  labels:
+    lab.cert-trust: enabled
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: kgateway-agent
+  namespace: kagent
+  labels:
+    lab.cert-trust: enabled
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: observability-agent
+  namespace: kagent
+  labels:
+    lab.cert-trust: enabled
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: promql-agent
+  namespace: kagent
+  labels:
+    lab.cert-trust: enabled
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: argo-rollouts-conversion-agent
+  namespace: kagent
+  labels:
+    lab.cert-trust: enabled

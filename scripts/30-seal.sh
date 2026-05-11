@@ -14,9 +14,9 @@ NAMESPACE="${NS:-agentgateway-system}"
 ENV_VAR="${ENV_VAR:-ANTHROPIC_API_KEY}"
 FIELD="${FIELD:-Authorization}"
 
-# OUTPUT_PATH = де записати sealed manifest. Default відповідає current
-# GitOps layout (apps/base/sealed/anthropic.yaml — реальна локація).
-# Override через OUTPUT=... для інших secrets чи нових clusters.
+# OUTPUT_PATH = where to write the sealed manifest. Default matches current
+# GitOps layout (apps/base/sealed/anthropic.yaml — actual location).
+# Override via OUTPUT=... for other secrets or new clusters.
 OUTPUT_PATH="${OUTPUT:-clusters/kind-lab/apps/base/sealed/anthropic.yaml}"
 CONTROLLER_NAME="${CONTROLLER_NAME:-sealed-secrets-controller}"
 CONTROLLER_NS="${CONTROLLER_NS:-sealed-secrets}"

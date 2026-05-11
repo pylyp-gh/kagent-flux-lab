@@ -24,7 +24,7 @@ if ! kubectl cluster-info >/dev/null 2>&1; then
   exit 0
 fi
 
-# 3. Active key вже у cluster? (idempotent — may be re-run)
+# 3. Active key already in cluster? (idempotent — may be re-run)
 if kubectl get secret -n sealed-secrets \
      -l sealedsecrets.bitnami.com/sealed-secrets-key=active \
      --no-headers 2>/dev/null | grep -q .; then

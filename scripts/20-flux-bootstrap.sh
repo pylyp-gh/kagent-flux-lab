@@ -8,14 +8,14 @@ CLUSTER_NAME="${CLUSTER_NAME:-kind-lab}"
 GITHUB_USER="${GITHUB_USER:?GITHUB_USER not set — fill .envrc}"
 GITHUB_REPO="${GITHUB_REPO:-kagent-flux-lab}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
-# FLUX_PATH = шлях у git до GitOps tree (де живуть infrastructure.yaml + apps.yaml).
-# Раніше default = clusters/${CLUSTER_NAME}, але це **coupling** двох
-# незалежних концептів:
+# FLUX_PATH = path in git to the GitOps tree (where infrastructure.yaml + apps.yaml live).
+# Previously default = clusters/${CLUSTER_NAME}, but that **couples** two
+# independent concepts:
 #   - CLUSTER_NAME — runtime identifier (kind container name, kubectl context)
-#   - FLUX_PATH — storage identity (де у git живуть manifests)
-# Для multi-cluster setup (test cluster reuses prod GitOps tree через branch
-# tweaks замість окремого path) це coupling ламається. Тому hardcoded default
-# на canonical path; multi-env setup overrides через env var.
+#   - FLUX_PATH — storage identity (where manifests live in git)
+# For multi-cluster setups (test cluster reusing a prod GitOps tree via branch
+# tweaks instead of a separate path) this coupling breaks. Hence hardcoded default
+# to the canonical path; multi-env setups override via env var.
 FLUX_PATH="${FLUX_PATH:-clusters/kind-lab}"
 
 G="\033[32m"; R="\033[31m"; Y="\033[33m"; X="\033[0m"
@@ -80,4 +80,5 @@ echo
 say "Flux components:"
 flux get all -A
 echo
-say "Phase 3 done. Next: scripts/30-infra-deploy.sh (Phase 4 — MetalLB + Sealed Secrets)"
+say "Bootstrap done. Next: git push to ${GITHUB_BRANCH} — Flux reconciles the rest."
+say "Watch progress: flux get kustomizations -A"

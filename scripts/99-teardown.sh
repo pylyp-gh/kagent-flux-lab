@@ -11,7 +11,7 @@ G="\033[32m"; Y="\033[33m"; X="\033[0m"
 say()  { echo -e "${G}==>${X} $*"; }
 warn() { echo -e "${Y}-->${X} $*"; }
 
-# ---- Backup sealed-secrets key BEFORE delete (so reseal не потрібен на recreate) ----
+# ---- Backup sealed-secrets key BEFORE delete (so re-seal isn't needed on recreate) ----
 say "Backing up sealed-secrets key (if cluster reachable)..."
 bash "$(dirname "$0")/40-key-backup.sh" || warn "key backup failed (non-fatal — DR may require re-seal)"
 
