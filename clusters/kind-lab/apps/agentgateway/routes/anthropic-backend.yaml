@@ -1,10 +1,10 @@
 ---
-# Two nearly identical Anthropic backends:
-#   - anthropic               — catch-all HTTPRoute "/" (any path → translation to Anthropic)
-#   - anthropic-completions   — specifically PathPrefix /v1/chat/completions
+# Two nearly identical Anthropic backends serving the dual path-style:
+#   - anthropic              — catch-all HTTPRoute "/" (any path → translation to Anthropic)
+#   - anthropic-completions  — specifically PathPrefix /v1/chat/completions
 # Both use provider.anthropic with claude-opus-4-6 and anthropic-secret for auth.
-# TODO (Reviewer NTH3): consolidate into one backend + HTTPRoute with multiple matches —
-# currently duplicate config for readability of two path-style variants.
+# Could be consolidated into one backend + HTTPRoute with multiple matches;
+# kept separate here for readability of the dual-path mapping.
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayBackend
 metadata:

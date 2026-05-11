@@ -80,4 +80,5 @@ echo
 say "Flux components:"
 flux get all -A
 echo
-say "Phase 3 done. Next: scripts/30-infra-deploy.sh (Phase 4 — MetalLB + Sealed Secrets)"
+say "Bootstrap done. Next: git push to ${GITHUB_BRANCH} — Flux reconciles the rest."
+say "Watch progress: flux get kustomizations -A"

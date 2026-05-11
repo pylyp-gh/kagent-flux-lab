@@ -9,4 +9,7 @@ export CLUSTER_NAME="kind-lab"
 export GITHUB_USER=""           # github username, e.g. "phsethz"
 export GITHUB_REPO="kagent-flux-lab"
 export GITHUB_BRANCH="main"
-export FLUX_PATH="clusters/${CLUSTER_NAME}"
+# FLUX_PATH = canonical GitOps tree path in git. NOT derived from CLUSTER_NAME
+# (those are decoupled — see README "Multi-cluster" section). Keep this value
+# even if you rename CLUSTER_NAME for a parallel test cluster.
+export FLUX_PATH="clusters/kind-lab"

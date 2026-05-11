@@ -99,9 +99,14 @@ cp .envrc.example .envrc
 direnv allow .
 
 make prereqs          # check tools, gh auth, env vars
-make cluster-up       # kind + MetalLB-ready network
+make cluster-up       # kind + MetalLB-ready network (auto-restores sealed-secrets RSA if backup exists)
 make flux-bootstrap   # create GitHub repo + Flux GitOps
 # from here — everything via git push to the Flux repo
+
+# IF first time (no RSA backup at ~/.sealed-secrets-keys/<cluster>.yaml):
+#   make seal             # re-seal anthropic-secret with the current cluster's RSA
+#   git add clusters/kind-lab/apps/base/sealed/anthropic.yaml && git commit && git push
+# Otherwise Flux will sync the existing SealedSecret which the cluster can't decrypt.
 
 # after bootstrap (~5 min reconcile):
 # 1. add DNS on router: kagent.ash.ph.lab + agentgateway.ash.ph.lab → MetalLB IP
