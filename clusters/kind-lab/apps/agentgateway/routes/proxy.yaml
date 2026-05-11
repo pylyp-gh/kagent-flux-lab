@@ -18,18 +18,19 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-    # HTTPS listener для secure context (потрібен для crypto.randomUUID() у kagent UI).
+    # HTTPS listener з wildcard hostname — SNI-based routing на *.lab.local.
+    # Один cert обслуговує kagent.lab.local, agentgateway.lab.local тощо.
     # TLS terminate на gateway — клієнт ↔ gateway по TLS, gateway ↔ pod plain HTTP.
-    # Certificate kagent-lab-local-tls видає cert-manager (lab-ca ClusterIssuer).
+    # Certificate lab-local-wildcard-tls видає cert-manager (lab-ca ClusterIssuer).
     - name: https
       protocol: HTTPS
       port: 443
-      hostname: kagent.lab.local
+      hostname: "*.lab.local"
       tls:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: kagent-lab-local-tls
+            name: lab-local-wildcard-tls
       allowedRoutes:
         namespaces:
           from: All

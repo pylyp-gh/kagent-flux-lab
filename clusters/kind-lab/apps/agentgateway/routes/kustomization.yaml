@@ -6,4 +6,5 @@ resources:
   - anthropic-backend.yaml
   - ollama-backend.yaml
   - kagent-ui-route.yaml
-  - kagent-ui-cert.yaml
+  - lab-local-wildcard-cert.yaml
+  - agentgateway-ui-route.yaml
