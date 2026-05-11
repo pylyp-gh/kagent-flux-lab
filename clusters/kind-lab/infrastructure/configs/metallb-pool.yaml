@@ -1,6 +1,9 @@
 # NB: addresses range MUST live inside docker bridge subnet of `kind` network.
 # Docker Desktop default: 172.20.x.x; OrbStack default: 192.168.97.x.
 # Verify per environment: `docker network inspect kind --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}'`
+#
+# Branch test-e2e: slice .180-199 (non-overlap з main branch .200-250).
+# Дозволяє паралельно запустити kind-lab-test cluster поруч з kind-lab без MetalLB IP conflict.
 ---
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -9,7 +12,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 192.168.97.200-192.168.97.250
+    - 192.168.97.180-192.168.97.199
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
