@@ -23,4 +23,7 @@ spec:
   openAI:
     # SDK appends /v1/chat/completions → final: <baseUrl>/v1/chat/completions
     # → /ollama/v1/chat/completions → matches HTTPRoute /ollama prefix
-    baseUrl: "http://agentgateway-proxy.agentgateway-system.svc.cluster.local/ollama"
+    #
+    # HTTPS: HTTP listener видалено з gateway. Pod trust lab-ca через
+    # SSL_CERT_FILE env + lab-ca-bundle ConfigMap (агент-trust patches).
+    baseUrl: "https://agentgateway-proxy.agentgateway-system.svc.cluster.local/ollama"
