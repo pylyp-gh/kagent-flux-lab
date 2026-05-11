@@ -1,0 +1,23 @@
+---
+# Direct LoadBalancer access до kagent UI через MetalLB.
+# MetalLB виділяє наступний вільний IP з пулу 192.168.97.200-250.
+# Не пов'язано з agentgateway-proxy — окремий L4 path.
+#
+# Альтернативний шлях (через agentgateway з hostname routing) — див.
+# clusters/kind-lab/apps/agentgateway/routes/kagent-ui-route.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kagent-ui-lb
+  namespace: kagent
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/component: ui
+    app.kubernetes.io/instance: kagent
+    app.kubernetes.io/name: kagent
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP

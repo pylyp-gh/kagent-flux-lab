@@ -5,3 +5,4 @@ resources:
   - proxy.yaml
   - anthropic-backend.yaml
   - ollama-backend.yaml
+  - kagent-ui-route.yaml

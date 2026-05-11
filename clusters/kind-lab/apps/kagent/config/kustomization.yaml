@@ -5,3 +5,4 @@ resources:
   - openai-stub.yaml
   - model-config.yaml
   - qwen-model-config.yaml
+  - kagent-ui-lb.yaml
