@@ -1,9 +1,11 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-name: kind-lab
+# Branch test-e2e: name + port різні від main, щоб два kind clusters
+# (kind-lab + kind-lab-test) могли coexist на одному OrbStack docker daemon.
+name: kind-lab-test
 nodes:
   - role: control-plane
   - role: worker
 networking:
   apiServerAddress: "127.0.0.1"
-  apiServerPort: 6443
+  apiServerPort: 6444
