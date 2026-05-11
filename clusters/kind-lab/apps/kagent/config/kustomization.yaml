@@ -1,10 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - anthropic-stub.yaml
   - openai-stub.yaml
   - model-config.yaml
   - qwen-model-config.yaml
-  - kagent-ui-lb.yaml
   - agent-trust-patches.yaml
   - test-agents.yaml
