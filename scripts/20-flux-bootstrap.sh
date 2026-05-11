@@ -8,7 +8,15 @@ CLUSTER_NAME="${CLUSTER_NAME:-kind-lab}"
 GITHUB_USER="${GITHUB_USER:?GITHUB_USER not set — fill .envrc}"
 GITHUB_REPO="${GITHUB_REPO:-kagent-flux-lab}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
-FLUX_PATH="${FLUX_PATH:-clusters/${CLUSTER_NAME}}"
+# FLUX_PATH = шлях у git до GitOps tree (де живуть infrastructure.yaml + apps.yaml).
+# Раніше default = clusters/${CLUSTER_NAME}, але це **coupling** двох
+# незалежних концептів:
+#   - CLUSTER_NAME — runtime identifier (kind container name, kubectl context)
+#   - FLUX_PATH — storage identity (де у git живуть manifests)
+# Для multi-cluster setup (test cluster reuses prod GitOps tree через branch
+# tweaks замість окремого path) це coupling ламається. Тому hardcoded default
+# на canonical path; multi-env setup overrides через env var.
+FLUX_PATH="${FLUX_PATH:-clusters/kind-lab}"
 
 G="\033[32m"; R="\033[31m"; Y="\033[33m"; X="\033[0m"
 say()  { echo -e "${G}==>${X} $*"; }

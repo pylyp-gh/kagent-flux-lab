@@ -106,6 +106,39 @@ make flux-bootstrap   # створити GitHub репу + Flux GitOps
 # 2. (опційно) додати lab-ca cert у Keychain trust → не побачиш browser warning
 ```
 
+## Multi-cluster / test environment setup
+
+Для запуску **другого kind cluster паралельно** (e.g., для E2E testing з нуля
+без torkanya production state) встанови **три** env vars перед make:
+
+```bash
+export CLUSTER_NAME=kind-lab-test       # новий kind cluster name (різний docker container)
+export GITHUB_BRANCH=test-e2e            # окремий git branch для test config tweaks
+export FLUX_PATH=clusters/kind-lab       # GitOps tree path (той самий що prod!)
+```
+
+**Чому FLUX_PATH explicit:** `CLUSTER_NAME` і `FLUX_PATH` — **різні concepts**:
+
+- `CLUSTER_NAME` — runtime identifier (kind container name, kubectl context).
+- `FLUX_PATH` — storage identity (де у git живуть manifests).
+
+Бутстрап-скрипт default'но точкою на `clusters/kind-lab` (наш канонічний tree),
+**не** на derived `clusters/${CLUSTER_NAME}`. Для multi-cluster setup це
+дозволяє reuse того самого GitOps tree через **branch tweaks** (e.g., test-e2e
+branch має MetalLB slice 192.168.97.180-199 замість prod .200-250 + kind
+apiServerPort 6444 замість 6443).
+
+Додатково потрібен tweak у test branch (вже зроблено):
+
+- `clusters/kind-lab/infrastructure/configs/metallb-pool.yaml` — IP slice
+  non-overlap з prod.
+- `kind/cluster.yaml` — different cluster name + apiServerPort щоб не
+  конфліктувати з main's 6443.
+
+Після cluster-up + flux-bootstrap test cluster reconciles той самий GitOps tree
+як prod, але з branch-specific tweaks. Demonstrates GitOps **branch-per-env**
+pattern (на відміну від path-per-env де у git є окрема директорія per cluster).
+
 ## Make targets
 
 | target                | що робить                                           |
