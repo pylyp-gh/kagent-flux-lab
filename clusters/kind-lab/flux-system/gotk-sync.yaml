@@ -8,8 +8,6 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    # Branch test-e2e (на main branch цей file має branch: main —
-    # це per-branch divergence для multi-environment setup).
     branch: test-e2e
   secretRef:
     name: flux-system
@@ -21,7 +19,7 @@ metadata:
   name: flux-system
   namespace: flux-system
 spec:
-  interval: 1m0s
+  interval: 10m0s
   path: ./clusters/kind-lab
   prune: true
   sourceRef:
