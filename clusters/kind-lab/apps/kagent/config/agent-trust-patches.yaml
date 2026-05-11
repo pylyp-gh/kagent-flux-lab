@@ -1,19 +1,19 @@
 ---
-# Trust injection для chart-managed Agent CRDs (HTTPS до agentgateway).
+# Trust injection for chart-managed Agent CRDs (HTTPS to agentgateway).
 #
-# Чому окремий yaml а не у HelmRelease postRenderer:
-#   Helm-controller's Server-Side Apply на згенеровані Agent CRDs **не** клаїмить
-#   ownership за spec.declarative.deployment.* fields (хоч postRenderer їх render-ить
-#   у manifest). Тому при kagent controller's наступному client-side Update PUT
-#   операція дроп deployment field.
+# Why a separate yaml rather than a HelmRelease postRenderer:
+#   Helm-controller's Server-Side Apply on generated Agent CRDs does **not** claim
+#   ownership of spec.declarative.deployment.* fields (even though postRenderer renders them
+#   into the manifest). So on the kagent controller's next client-side Update, the PUT
+#   operation drops the deployment field.
 #
-# Цей файл деплоїться через kagent-config Flux Kustomization, який runs AFTER
-# kagent-controller HelmRelease. kustomize-controller SSA з власним field manager
-# клаїмить deployment.env/volumes/volumeMounts → kagent controller не може дроп.
+# This file is deployed via the kagent-config Flux Kustomization, which runs AFTER
+# the kagent-controller HelmRelease. kustomize-controller SSA with its own field manager
+# claims deployment.env/volumes/volumeMounts → kagent controller can't drop them.
 #
-# Agents, які реально потребують trust (ходять через https://agentgateway-proxy.../...):
+# Agents that actually need trust (hitting https://agentgateway-proxy/.../...):
 #   - cilium-debug-agent, k8s-agent (claude-via-gateway → real Anthropic)
-# Решта — patch йде на запас (no harm), якщо у майбутньому переключити їх ModelConfig.
+# The rest — patch applied preemptively (no harm), in case they're switched to that ModelConfig later.
 
 apiVersion: kagent.dev/v1alpha2
 kind: Agent
@@ -253,4 +253,3 @@ spec:
             items:
               - key: ca.crt
                 path: ca.crt
-

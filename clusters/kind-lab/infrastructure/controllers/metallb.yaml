@@ -28,8 +28,8 @@ spec:
   chart:
     spec:
       chart: metallb
-      # Exact patch pin замість '>=0.15.0' floating. HelmRepository не OCI,
-      # тому digest pin не applicable — exact version поки best practice.
+      # Exact patch pin instead of '>=0.15.0' floating. HelmRepository is not OCI,
+      # so digest pin is not applicable — exact version is the current best practice.
       version: "0.15.3"
       sourceRef:
         kind: HelmRepository

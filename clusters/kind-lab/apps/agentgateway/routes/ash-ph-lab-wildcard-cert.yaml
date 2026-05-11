@@ -1,9 +1,9 @@
 ---
-# Wildcard certificate для всіх *.ash.ph.lab hostname.
-# Один Secret обслуговує kagent UI, agentgateway admin UI, і будь-які майбутні sub-domains.
-# Підписується lab-ca ClusterIssuer (self-signed root, infrastructure/configs).
+# Wildcard certificate for all *.ash.ph.lab hostnames.
+# One Secret serves the kagent UI, agentgateway admin UI, and any future sub-domains.
+# Signed by the lab-ca ClusterIssuer (self-signed root, infrastructure/configs).
 #
-# Гateway listener https використовує цей cert + hostname "*.ash.ph.lab" — SNI matches усі sub-domains.
+# Gateway listener https uses this cert + hostname "*.ash.ph.lab" — SNI matches all sub-domains.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -16,8 +16,8 @@ spec:
   dnsNames:
     - "*.ash.ph.lab"
     - "ash.ph.lab"
-    # In-cluster Service DNS — для kagent agent pods що ходять напряму
-    # до Service (без external DNS hop через router).
+    # In-cluster Service DNS — for kagent agent pods that reach the Service directly
+    # (no external DNS hop via router).
     - "agentgateway-proxy.agentgateway-system.svc.cluster.local"
     - "agentgateway-proxy.agentgateway-system.svc"
     - "agentgateway-proxy.agentgateway-system"

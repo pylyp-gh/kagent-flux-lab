@@ -1,11 +1,11 @@
-# AgentgatewayParameters: кастомізація proxy deployment + service через overlays.
+# AgentgatewayParameters: customise proxy deployment + service via overlays.
 #
-# Ціль: експонувати admin UI (binds 127.0.0.1:15000 всередині pod) назовні через MetalLB.
-# Стратегія: socat sidecar listens на 0.0.0.0:15010 → forwards до 127.0.0.1:15000.
-# Service overlay додає port 15010, MetalLB IP serves обидва 443 (HTTPS) і 15010 (admin).
+# Goal: expose the admin UI (binds 127.0.0.1:15000 inside the pod) externally via MetalLB.
+# Strategy: socat sidecar listens on 0.0.0.0:15010 → forwards to 127.0.0.1:15000.
+# Service overlay adds port 15010; MetalLB IP serves both 443 (HTTPS) and 15010 (admin).
 #
-# ⚠️  SECURITY: admin UI exposes live xDS dump, route config, secret refs. На prod
-# додавай NetworkPolicy + auth proxy (oauth2-proxy). Lab — open.
+# ⚠️  SECURITY: admin UI exposes live xDS dump, route config, secret refs. In prod
+# add NetworkPolicy + auth proxy (oauth2-proxy). Lab — open.
 ---
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayParameters
@@ -13,8 +13,8 @@ metadata:
   name: agentgateway-proxy
   namespace: agentgateway-system
 spec:
-  # Debug logging — лоgає full request bodies, struct parse errors, internal trace.
-  # Cost: галасливі логи (~10x volume). Lab-acceptable, prod зменшити після diagnosis.
+  # Debug logging — logs full request bodies, struct parse errors, internal trace.
+  # Cost: noisy logs (~10x volume). Lab-acceptable; reduce to info after diagnosis in prod.
   logging:
     level: debug
   deployment:
@@ -23,7 +23,7 @@ spec:
         spec:
           containers:
             - name: socat-admin
-              # Tag + digest pin — tag для зручності читання у logs/UI,
+              # Tag + digest pin — tag for readability in logs/UI,
               # digest — immutable identity. Registry rewrite tag → digest
               # mismatch → kubelet pull fail (intentional safety).
               image: alpine/socat:1.8.0.0@sha256:a6be4c0262b339c53ddad723cdd178a1a13271e1137c65e27f90a08c16de02b8

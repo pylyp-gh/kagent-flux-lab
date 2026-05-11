@@ -1,11 +1,11 @@
 ---
-# Kagent ModelConfig для Ollama qwen2.5:7b через agentgateway.
+# Kagent ModelConfig for Ollama qwen2.5:7b via agentgateway.
 #
 # kagent's OpenAI Go SDK → gateway /ollama HTTPRoute →
 #   AgentgatewayBackend ollama (provider=openai) →
-#   Ollama на Mac host:11434 OpenAI-compat endpoint
+#   Ollama on Mac host:11434 OpenAI-compat endpoint
 #
-# Чому OpenAI provider: agentgateway використовує openai тип для Ollama
+# Why OpenAI provider: agentgateway uses the openai type for Ollama
 # (Ollama exposes /v1/chat/completions OpenAI-compat). kagent's OpenAI SDK
 # sends standard format — no schema mismatch.
 apiVersion: kagent.dev/v1alpha2
@@ -17,13 +17,13 @@ spec:
   provider: OpenAI
   model: "qwen2.5:7b"
   # kagent's SDK requires OPENAI_API_KEY env var. Reference placeholder
-  # (kagent-openai Secret). Real auth не потрібна — Ollama локальний, no auth.
+  # (kagent-openai Secret). Real auth not needed — Ollama is local, no auth.
   apiKeySecret: kagent-openai
   apiKeySecretKey: OPENAI_API_KEY
   openAI:
     # SDK appends /v1/chat/completions → final: <baseUrl>/v1/chat/completions
     # → /ollama/v1/chat/completions → matches HTTPRoute /ollama prefix
     #
-    # HTTPS: HTTP listener видалено з gateway. Pod trust lab-ca через
-    # SSL_CERT_FILE env + lab-ca-bundle ConfigMap (агент-trust patches).
+    # HTTPS: HTTP listener removed from gateway. Pod trusts lab-ca via
+    # SSL_CERT_FILE env + lab-ca-bundle ConfigMap (agent-trust patches).
     baseUrl: "https://agentgateway-proxy.agentgateway-system.svc.cluster.local/ollama"

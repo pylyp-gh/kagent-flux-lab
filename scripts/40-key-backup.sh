@@ -29,7 +29,7 @@ if [ -z "${KEY_NAME}" ]; then
   exit 0
 fi
 
-# Setup backup dir з safe permissions
+# Setup backup dir with safe permissions
 mkdir -p "${BACKUP_DIR}"
 chmod 700 "${BACKUP_DIR}"
 

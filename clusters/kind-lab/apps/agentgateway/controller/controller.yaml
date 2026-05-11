@@ -8,7 +8,7 @@ spec:
   interval: 5m
   url: oci://cr.agentgateway.dev/charts/agentgateway-crds
   ref:
-    # Tag + digest. Tag для зручності читання, digest — immutable identity.
+    # Tag + digest. Tag for readability, digest — immutable identity.
     # Refresh: `crane digest cr.agentgateway.dev/charts/agentgateway-crds:v2.2.1`
     tag: v2.2.1
     digest: sha256:a82eae1e4346aa4165edb380ef72551898e92a4c55182780c332c06d534054c8
@@ -62,9 +62,9 @@ spec:
   values:
     controller:
       image:
-        # IfNotPresent замість Always — у поєднанні з tag-pinned reference дає
-        # stable image source. Always варто тільки коли treat tag як rolling
-        # ("latest", "main") — небезпечно без digest pinning.
+        # IfNotPresent instead of Always — combined with a tag-pinned reference gives
+        # a stable image source. Always is only appropriate when treating a tag as rolling
+        # ("latest", "main") — unsafe without digest pinning.
         pullPolicy: IfNotPresent
       extraEnv:
         KGW_ENABLE_GATEWAY_API_EXPERIMENTAL_FEATURES: "true"

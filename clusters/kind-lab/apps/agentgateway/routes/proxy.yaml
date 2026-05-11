@@ -12,10 +12,10 @@ spec:
       kind: AgentgatewayParameters
       name: agentgateway-proxy
   listeners:
-    # HTTPS-only — єдиний secure entrypoint. HTTP listener видалено.
-    # Hostname не вказано → listener accepts будь-який SNI; cert ash-ph-lab-wildcard-tls
-    # покриває *.ash.ph.lab + in-cluster Service DNS (через extended dnsNames).
-    # In-cluster kagent agent pods trust lab-ca через trust-manager Bundle.
+    # HTTPS-only — single secure entrypoint. HTTP listener removed.
+    # No hostname specified → listener accepts any SNI; cert ash-ph-lab-wildcard-tls
+    # covers *.ash.ph.lab + in-cluster Service DNS (via extended dnsNames).
+    # In-cluster kagent agent pods trust lab-ca via trust-manager Bundle.
     - name: https
       protocol: HTTPS
       port: 443

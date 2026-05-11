@@ -1,24 +1,24 @@
 # ⚠️⚠️⚠️ ANTI-PATTERN PRECEDENT WARNING ⚠️⚠️⚠️
 #
-# Цей файл — plain Kubernetes Secret з fake API key, committed plaintext у git.
-# Це БЕЗПЕЧНО ТІЛЬКИ ТОМУ що value явно fake (placeholder, не реальний key).
+# This file is a plain Kubernetes Secret with a fake API key, committed plaintext to git.
+# This is SAFE ONLY BECAUSE the value is explicitly fake (placeholder, not a real key).
 #
-# 🚨 КОЛИ ТОБІ ЗАМАНЕТЬСЯ ЗАМІНИТИ FAKE NA RAL KEY — STOP!
-#    Real API keys ЗАВЖДИ йдуть через SealedSecret (див. scripts/30-seal.sh
-#    та agentgateway-system/anthropic-secret як приклад). НІКОЛИ не commit
-#    raw Secret з real credentials — потрапить у git history forever,
-#    і rotate не очистить minor branches.
+# 🚨 IF YOU'RE TEMPTED TO REPLACE THE FAKE KEY WITH A REAL ONE — STOP!
+#    Real API keys ALWAYS go via SealedSecret (see scripts/30-seal.sh
+#    and agentgateway-system/anthropic-secret as an example). NEVER commit
+#    a raw Secret with real credentials — it ends up in git history forever,
+#    and rotating won't clean minor branches.
 #
-# Чому цей stub існує:
+# Why this stub exists:
 # kagent's chart enables 10 demo agents (helm-agent, k8s-agent, istio-agent, ...)
-# що default'но використовували OpenAI provider через `default-model-config`
+# that defaulted to the OpenAI provider via `default-model-config`
 # ModelConfig (referencing Secret `kagent-openai`). Stub satisfies SDK init
-# validation — pods init clean навіть без real key.
+# validation — pods init cleanly even without a real key.
 #
-# Усі ці агенти у нашому lab переключені на `claude-via-gateway` ModelConfig
-# через `controller.yaml` HelmRelease values override. Тобто цей Secret все ще
-# referenced (ADK init grabs env vars з spec.apiKeySecret), але **реальна auth**
-# до Anthropic інжектиться gateway-side через
+# All these agents in our lab are switched to the `claude-via-gateway` ModelConfig
+# via the `controller.yaml` HelmRelease values override. So this Secret is still
+# referenced (ADK init grabs env vars from spec.apiKeySecret), but **real auth**
+# to Anthropic is injected gateway-side via
 # `agentgateway-system/anthropic-secret` (SealedSecret).
 ---
 apiVersion: v1
@@ -33,5 +33,5 @@ metadata:
       Real Anthropic auth lives at agentgateway-system/anthropic-secret.
 type: Opaque
 stringData:
-  # PLACEHOLDER — не справжній key. SDK init checks presence of env var, не format.
+  # PLACEHOLDER — not a real key. SDK init checks presence of env var, not format.
   OPENAI_API_KEY: "PLACEHOLDER-NOT-A-REAL-KEY-USE-SEALED-SECRET-IF-REAL"

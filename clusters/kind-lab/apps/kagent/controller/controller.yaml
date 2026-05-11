@@ -53,7 +53,7 @@ spec:
   install:
     remediation:
       retries: 3
-  # Workaround chart bug: Helm OCI digest суфікс рендериться у label + image tag → invalid '+'.
+  # Workaround chart bug: Helm OCI digest suffix renders into label + image tag → invalid '+'.
   # postRenderer fixes labels (replace empty), images (Kustomize images: override).
   postRenderers:
     - kustomize:
@@ -72,15 +72,15 @@ spec:
               - op: replace
                 path: /metadata/labels/app.kubernetes.io~1version
                 value: ""
-          # Agent trust injection (SSL_CERT_FILE + lab-ca-bundle volume) винесено
-          # у окремий файл apps/kagent/config/agent-trust-patches.yaml.
-          # Причина: postRenderer на kagent HelmRelease рендерить deployment field
-          # у manifest, але helm-controller SSA не клаїмить ownership за нього →
-          # kagent controller's наступний client-side Update drops field.
-          # Через окремий Flux Kustomization (kagent-config) kustomize-controller
-          # клаїмить ownership власним field manager — конфлікт-free, persistent.
+          # Agent trust injection (SSL_CERT_FILE + lab-ca-bundle volume) moved
+          # to a separate file apps/kagent/config/agent-trust-patches.yaml.
+          # Reason: postRenderer on kagent HelmRelease renders the deployment field
+          # into the manifest, but helm-controller SSA doesn't claim ownership of it →
+          # kagent controller's next client-side Update drops the field.
+          # Via a separate Flux Kustomization (kagent-config), kustomize-controller
+          # claims ownership with its own field manager — conflict-free, persistent.
   values:
-    # Global tag override — chart's template default falls back to це
+    # Global tag override — chart's template default falls back to this
     tag: "0.9.2"
     # Explicit overrides per known component (belt-and-suspenders)
     controller:
@@ -88,10 +88,10 @@ spec:
         tag: "0.9.2"
       agentImage:
         tag: "0.9.2"
-    # Override modelConfig для всіх chart-managed agents — ходять через
-    # agentgateway (claude-via-gateway → Anthropic Claude). Default був
-    # default-model-config (real OpenAI, stub key fail), що марно.
-    # Тепер кожен з 10 default agents має робочий backend через gateway.
+    # Override modelConfig for all chart-managed agents — routes via
+    # agentgateway (claude-via-gateway → Anthropic Claude). Default was
+    # default-model-config (real OpenAI, stub key fails), which is useless.
+    # Now each of the 10 default agents has a working backend via gateway.
     k8s-agent:
       modelConfigRef: claude-via-gateway
     helm-agent:

@@ -1,10 +1,10 @@
 ---
-# Два майже ідентичних Anthropic backends:
-#   - anthropic               — catch-all HTTPRoute "/" (будь-який path → translation до Anthropic)
+# Two nearly identical Anthropic backends:
+#   - anthropic               — catch-all HTTPRoute "/" (any path → translation to Anthropic)
 #   - anthropic-completions   — specifically PathPrefix /v1/chat/completions
-# Обидва provider.anthropic з claude-opus-4-6 та anthropic-secret для auth.
-# TODO (Reviewer NTH3): consolidate в один backend + HTTPRoute з multiple matches —
-# зараз duplicate config для readability двох path-style варіантів.
+# Both use provider.anthropic with claude-opus-4-6 and anthropic-secret for auth.
+# TODO (Reviewer NTH3): consolidate into one backend + HTTPRoute with multiple matches —
+# currently duplicate config for readability of two path-style variants.
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayBackend
 metadata:
@@ -35,7 +35,7 @@ spec:
     auth:
       secretRef:
         name: anthropic-secret
-        
+
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

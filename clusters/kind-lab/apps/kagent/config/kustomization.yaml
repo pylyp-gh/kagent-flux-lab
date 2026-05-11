@@ -2,9 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   # openai-stub.yaml moved to ../stubs/ — applied EARLY (kagent-stubs Flux
-  # Kustomization). Reason: Helm install kagent-controller spawn'ить Agent
-  # CRDs → pods що потребують Secret. Якщо Secret applied тут (after
-  # controller) — deadlock на bootstrap.
+  # Kustomization). Reason: Helm install kagent-controller spawns Agent
+  # CRDs → pods that need the Secret. If Secret applied here (after
+  # controller) — deadlock on bootstrap.
   - model-config.yaml
   - qwen-model-config.yaml
   - agent-trust-patches.yaml

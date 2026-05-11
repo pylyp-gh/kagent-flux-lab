@@ -1,28 +1,28 @@
 ---
-# kagent ModelConfig що ходить через agentgateway з OpenAI-format payload,
-# а gateway сам транслює до Anthropic native API.
+# kagent ModelConfig that routes via agentgateway with an OpenAI-format payload;
+# the gateway itself translates to the Anthropic native API.
 #
-# 🔧 TODO: track upstream fix у agentgateway для Anthropic tool_choice deserializer.
-#    Поточна реалізація — це **навмисний workaround**. Якщо upstream випустить
-#    реліз з виправленим Rust deserializer (натівно accepting Anthropic
-#    {"type": "auto"} shape), варто переключити provider назад на Anthropic для
-#    explicit semantics. Перевірити при кожному agentgateway upgrade — пошук
-#    issue з ключовими словами "ChatCompletionToolChoiceOption" або
-#    "tool_choice" у https://github.com/agentgateway/agentgateway/issues
+# 🔧 TODO: track upstream fix in agentgateway for the Anthropic tool_choice deserializer.
+#    The current implementation is an **intentional workaround**. If upstream releases
+#    a fix with a corrected Rust deserializer (natively accepting the Anthropic
+#    {"type": "auto"} shape), switch the provider back to Anthropic for
+#    explicit semantics. Check on every agentgateway upgrade — search
+#    issues with keywords "ChatCompletionToolChoiceOption" or
+#    "tool_choice" at https://github.com/agentgateway/agentgateway/issues
 #
-# Чому provider: OpenAI а не Anthropic:
-#   agentgateway внутрішньо парсить body як OpenAI ChatCompletion схему
-#   (зокрема tool_choice — Rust untagged enum ChatCompletionToolChoiceOption).
-#   Anthropic SDK з kagent ADK шле tool_choice у формі {"type":"auto"|"any"|"tool"},
-#   що НЕ matches OpenAI варіанти ("auto"|"none"|"required"|{"type":"function",...})
-#   → серіалізатор кидає 503. З provider: OpenAI ADK генерує OpenAI body натівно
-#   → парсер задоволений → gateway translate'ить до Anthropic /v1/messages.
+# Why provider: OpenAI instead of Anthropic:
+#   agentgateway internally parses the body as an OpenAI ChatCompletion schema
+#   (specifically tool_choice — Rust untagged enum ChatCompletionToolChoiceOption).
+#   Anthropic SDK via kagent ADK sends tool_choice as {"type":"auto"|"any"|"tool"},
+#   which does NOT match OpenAI variants ("auto"|"none"|"required"|{"type":"function",...})
+#   → serialiser throws 503. With provider: OpenAI, ADK generates an OpenAI body natively
+#   → parser is satisfied → gateway translates to Anthropic /v1/messages.
 #
-# Потік аутентифікації:
-#   - kagent ADK init вимагає OPENAI_API_KEY env var (зі stub Secret kagent-openai)
-#   - Справжній Anthropic ключ інжектиться gateway-side
+# Auth flow:
+#   - kagent ADK init requires OPENAI_API_KEY env var (from stub Secret kagent-openai)
+#   - Real Anthropic key is injected gateway-side
 #     (AgentgatewayBackend anthropic-completions → policies.auth.secretRef → x-api-key)
-#   - kagent сам нічого справжнього не зберігає
+#   - kagent itself stores nothing real
 apiVersion: kagent.dev/v1alpha2
 kind: ModelConfig
 metadata:
@@ -30,22 +30,22 @@ metadata:
   namespace: kagent
 spec:
   provider: OpenAI
-  # Модель ім'я переходить через gateway translation у backend → Anthropic API.
-  # AgentgatewayBackend anthropic-completions hardcode'ить claude-opus-4-6,
-  # тому field тут переважно для UI/логів kagent.
+  # Model name passes through gateway translation to the backend → Anthropic API.
+  # AgentgatewayBackend anthropic-completions hardcodes claude-opus-4-6,
+  # so this field is mostly for the kagent UI/logs.
   model: claude-opus-4-6
   apiKeySecret: kagent-openai
   apiKeySecretKey: OPENAI_API_KEY
   openAI:
-    # SDK додає /v1/chat/completions → final URL:
+    # SDK appends /v1/chat/completions → final URL:
     #   https://agentgateway-proxy.agentgateway-system.svc.cluster.local/v1/chat/completions
     # → matches HTTPRoute anthropic-completions (PathPrefix /v1/chat/completions)
     # → backend anthropic-completions (provider.anthropic, claude-opus-4-6)
-    # → gateway транслює OpenAI body → Anthropic native
+    # → gateway translates OpenAI body → Anthropic native
     # → upstream api.anthropic.com/v1/messages
     #
-    # HTTPS бо HTTP listener на gateway видалено (тільки secure entrypoint).
-    # Trust: lab-ca-bundle ConfigMap mounted у pod через postRenderer patch у kagent
-    # HelmRelease, SSL_CERT_FILE env vary точкою на /etc/ssl/lab/ca.crt.
-    # Cert SAN включає agentgateway-proxy.agentgateway-system.svc.cluster.local.
+    # HTTPS because the HTTP listener on the gateway has been removed (secure entrypoint only).
+    # Trust: lab-ca-bundle ConfigMap mounted in pod via postRenderer patch in kagent
+    # HelmRelease, SSL_CERT_FILE env var pointing to /etc/ssl/lab/ca.crt.
+    # Cert SAN includes agentgateway-proxy.agentgateway-system.svc.cluster.local.
     baseUrl: "https://agentgateway-proxy.agentgateway-system.svc.cluster.local"

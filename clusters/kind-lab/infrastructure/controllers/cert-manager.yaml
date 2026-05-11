@@ -1,11 +1,11 @@
 ---
 # cert-manager — provides Certificate / Issuer CRDs + reconciliation loop
-# що видає TLS секрети з обраного CA. У lab — self-signed root CA
+# that issues TLS secrets from the chosen CA. In lab — self-signed root CA
 # (configs/cert-manager-issuers.yaml).
 #
-# Чому потрібен HTTPS: kagent UI використовує crypto.randomUUID() з Web Crypto API,
-# який доступний ТІЛЬКИ у Secure Context (HTTPS, або localhost виняток).
-# Через http://kagent.ash.ph.lab на kind-lab — insecure → API undefined → UI crash.
+# Why HTTPS is needed: kagent UI uses crypto.randomUUID() from the Web Crypto API,
+# which is only available in a Secure Context (HTTPS, or localhost exception).
+# Over http://kagent.ash.ph.lab on kind-lab — insecure → API undefined → UI crash.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -45,18 +45,18 @@ spec:
   upgrade:
     crds: CreateReplace
   values:
-    # CRDs встановлюються через chart саме (стандартний шлях для v1.15+)
+    # CRDs installed via chart (standard path for v1.15+)
     crds:
       enabled: true
       keep: true
 
 ---
-# trust-manager (subproject cert-manager) — distributes trust bundles до ConfigMaps
-# у designated namespaces. Дозволяє pod'ам у будь-якій ns trust'ити lab CA для
-# in-cluster HTTPS зв'язку без manual cert mounts.
+# trust-manager (cert-manager subproject) — distributes trust bundles to ConfigMaps
+# in designated namespaces. Allows pods in any ns to trust the lab CA for
+# in-cluster HTTPS communication without manual cert mounts.
 #
-# Use case: kagent agent pods → HTTPS до agentgateway-proxy.
-# Bundle merges lab-ca + system CAs → ConfigMap у kagent ns →
+# Use case: kagent agent pods → HTTPS to agentgateway-proxy.
+# Bundle merges lab-ca + system CAs → ConfigMap in kagent ns →
 # pods mount + SSL_CERT_FILE env var.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -85,7 +85,7 @@ spec:
   upgrade:
     crds: CreateReplace
   values:
-    # Default Trust namespace — звідки trust-manager читає `default-package` ConfigMap (system CAs).
+    # Default Trust namespace — where trust-manager reads the `default-package` ConfigMap (system CAs).
     app:
       trust:
         namespace: cert-manager
