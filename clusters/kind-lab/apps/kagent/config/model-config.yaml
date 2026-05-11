@@ -18,9 +18,9 @@
 #   → серіалізатор кидає 503. З provider: OpenAI ADK генерує OpenAI body натівно
 #   → парсер задоволений → gateway translate'ить до Anthropic /v1/messages.
 #
-# Auth flow:
+# Потік аутентифікації:
 #   - kagent ADK init вимагає OPENAI_API_KEY env var (зі stub Secret kagent-openai)
-#   - Реальний Anthropic ключ інжектиться gateway-side
+#   - Справжній Anthropic ключ інжектиться gateway-side
 #     (AgentgatewayBackend anthropic-completions → policies.auth.secretRef → x-api-key)
 #   - kagent сам нічого справжнього не зберігає
 apiVersion: kagent.dev/v1alpha2
@@ -37,11 +37,11 @@ spec:
   apiKeySecret: kagent-openai
   apiKeySecretKey: OPENAI_API_KEY
   openAI:
-    # SDK appends /v1/chat/completions → final URL:
+    # SDK додає /v1/chat/completions → final URL:
     #   https://agentgateway-proxy.agentgateway-system.svc.cluster.local/v1/chat/completions
     # → matches HTTPRoute anthropic-completions (PathPrefix /v1/chat/completions)
     # → backend anthropic-completions (provider.anthropic, claude-opus-4-6)
-    # → gateway translates OpenAI body → Anthropic native
+    # → gateway транслює OpenAI body → Anthropic native
     # → upstream api.anthropic.com/v1/messages
     #
     # HTTPS бо HTTP listener на gateway видалено (тільки secure entrypoint).

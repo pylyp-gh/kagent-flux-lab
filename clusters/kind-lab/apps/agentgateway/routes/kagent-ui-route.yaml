@@ -1,11 +1,11 @@
 ---
-# Експозиція kagent UI через існуючий agentgateway-proxy listener.
-# Hostname-based routing — той самий LoadBalancer IP (192.168.97.200),
-# різний Host header → різний backend.
+# Експозиція kagent UI через спільний agentgateway-proxy HTTPS listener.
+# Hostname-based routing — той самий MetalLB LB IP (192.168.97.200),
+# різний SNI/Host → різний backend.
 #
-# Доступ: додати у /etc/hosts на хості:
-#   192.168.97.200 kagent.ash.ph.lab
-# Тоді: http://kagent.ash.ph.lab
+# Доступ: DNS на router → kagent.ash.ph.lab → 192.168.97.200.
+# Тоді: https://kagent.ash.ph.lab (browser спершу попередить про
+# self-signed CA — accept once; trust постійно через lab-ca cert у Keychain).
 #
 # kagent-ui Service — звичайний K8s Service (kind=Service default).
 # agentgateway controller поважає стандартні Gateway API backendRef'и,

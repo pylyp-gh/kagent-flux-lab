@@ -8,7 +8,7 @@ spec:
   interval: 5m
   url: oci://cr.agentgateway.dev/charts/agentgateway-crds
   ref:
-    # Tag + digest. Tag для human readability, digest immutable identity.
+    # Tag + digest. Tag для зручності читання, digest — immutable identity.
     # Refresh: `crane digest cr.agentgateway.dev/charts/agentgateway-crds:v2.2.1`
     tag: v2.2.1
     digest: sha256:a82eae1e4346aa4165edb380ef72551898e92a4c55182780c332c06d534054c8
@@ -38,7 +38,7 @@ spec:
   interval: 1m
   url: oci://cr.agentgateway.dev/charts/agentgateway
   ref:
-    # Tag + digest. Refresh: `crane digest cr.agentgateway.dev/charts/agentgateway:v2.2.1`
+    # Tag + digest pin. Refresh: `crane digest cr.agentgateway.dev/charts/agentgateway:v2.2.1`
     tag: v2.2.1
     digest: sha256:f7497fcb08f73fdad9f60fb54a9623aa8e3a53a485ed78269f8cc80d38eaab94
 ---

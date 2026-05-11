@@ -1,16 +1,17 @@
-# Ollama backend — local Ollama на Mac host через docker bridge gateway.
+# Ollama backend — локальна Ollama на Mac host через docker bridge gateway.
 #
-# Architecture:
-#   pod inside cluster
+# Архітектура:
+#   pod всередині cluster
 #     → Service "ollama" (headless, ClusterIP=None)
-#     → EndpointSlice → 192.168.97.1:11434 (Mac host on OrbStack docker bridge)
-#     → Ollama listening 0.0.0.0:11434 (set via Ollama.app Settings or LaunchAgent)
+#     → EndpointSlice → 10.222.222.222:11434 (Mac host через OrbStack docker bridge)
+#     → Ollama listening 0.0.0.0:11434 (виставлено через Ollama.app Settings або LaunchAgent)
 #
 # Чому headless Service + EndpointSlice: external IP не може бути ClusterIP target,
-# K8s не дозволяє selectors на external addresses. Headless Service + manual EndpointSlice
-# = "external service abstraction" pattern.
+# K8s не дозволяє selectors на external адресах. Headless Service + manual EndpointSlice
+# = pattern "external service abstraction".
 #
-# AgentgatewayBackend uses provider=openai bo Ollama exposes /v1/chat/completions OpenAI-compatible API.
+# AgentgatewayBackend з provider=openai бо Ollama експонує /v1/chat/completions —
+# OpenAI-compatible API.
 ---
 apiVersion: v1
 kind: Service
@@ -67,8 +68,8 @@ spec:
         - path:
             type: PathPrefix
             value: /ollama
-      # Strip '/ollama' prefix перш ніж forward upstream:
-      # /ollama/chat/completions → /v1/chat/completions (Ollama's OpenAI endpoint)
+      # Strip '/ollama' префікс перш ніж forward upstream:
+      # /ollama/chat/completions → /v1/chat/completions (Ollama OpenAI endpoint)
       filters:
         - type: URLRewrite
           urlRewrite:

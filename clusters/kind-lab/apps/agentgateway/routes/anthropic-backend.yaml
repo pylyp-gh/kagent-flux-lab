@@ -1,4 +1,10 @@
 ---
+# Два майже ідентичних Anthropic backends:
+#   - anthropic               — catch-all HTTPRoute "/" (будь-який path → translation до Anthropic)
+#   - anthropic-completions   — specifically PathPrefix /v1/chat/completions
+# Обидва provider.anthropic з claude-opus-4-6 та anthropic-secret для auth.
+# TODO (Reviewer NTH3): consolidate в один backend + HTTPRoute з multiple matches —
+# зараз duplicate config для readability двох path-style варіантів.
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayBackend
 metadata:
