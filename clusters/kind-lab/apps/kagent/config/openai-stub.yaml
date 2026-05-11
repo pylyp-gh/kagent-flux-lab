@@ -1,15 +1,25 @@
-# Placeholder Secret для default OpenAI agents.
+# ⚠️⚠️⚠️ ANTI-PATTERN PRECEDENT WARNING ⚠️⚠️⚠️
 #
-# kagent's chart enables 10 demo agents (helm-agent, k8s-agent, istio-agent, тощо)
-# що default'но використовують OpenAI provider через `default-model-config` ModelConfig
-# (referencing Secret `kagent-openai`).
+# Цей файл — plain Kubernetes Secret з fake API key, committed plaintext у git.
+# Це БЕЗПЕЧНО ТІЛЬКИ ТОМУ що value явно fake (placeholder, не реальний key).
 #
-# У нашому lab — реальний OpenAI key немає, не плануємо. Default agents все одно
-# create-нуть pods, які crashloop без Secret. Stub satisfies SDK init validation
-# (агенти все одно не invoke'нуться без real key — але їх init не fail).
+# 🚨 КОЛИ ТОБІ ЗАМАНЕТЬСЯ ЗАМІНИТИ FAKE NA RAL KEY — STOP!
+#    Real API keys ЗАВЖДИ йдуть через SealedSecret (див. scripts/30-seal.sh
+#    та agentgateway-system/anthropic-secret як приклад). НІКОЛИ не commit
+#    raw Secret з real credentials — потрапить у git history forever,
+#    і rotate не очистить minor branches.
 #
-# Реальна functionality агентів — через нашу `claude-via-gateway` ModelConfig
-# (Anthropic via agentgateway).
+# Чому цей stub існує:
+# kagent's chart enables 10 demo agents (helm-agent, k8s-agent, istio-agent, ...)
+# що default'но використовували OpenAI provider через `default-model-config`
+# ModelConfig (referencing Secret `kagent-openai`). Stub satisfies SDK init
+# validation — pods init clean навіть без real key.
+#
+# Усі ці агенти у нашому lab переключені на `claude-via-gateway` ModelConfig
+# через `controller.yaml` HelmRelease values override. Тобто цей Secret все ще
+# referenced (ADK init grabs env vars з spec.apiKeySecret), але **реальна auth**
+# до Anthropic інжектиться gateway-side через
+# `agentgateway-system/anthropic-secret` (SealedSecret).
 ---
 apiVersion: v1
 kind: Secret
@@ -18,8 +28,10 @@ metadata:
   namespace: kagent
   annotations:
     purpose: |
-      Placeholder for default kagent demo agents (OpenAI provider).
-      No real OpenAI key — agents won't invoke successfully but pods init clean.
+      Lab-only placeholder for kagent ADK init validation.
+      DO NOT use this pattern as template for real keys — use SealedSecret.
+      Real Anthropic auth lives at agentgateway-system/anthropic-secret.
 type: Opaque
 stringData:
-  OPENAI_API_KEY: "fake-openai-not-validated-at-init"
+  # PLACEHOLDER — не справжній key. SDK init checks presence of env var, не format.
+  OPENAI_API_KEY: "PLACEHOLDER-NOT-A-REAL-KEY-USE-SEALED-SECRET-IF-REAL"

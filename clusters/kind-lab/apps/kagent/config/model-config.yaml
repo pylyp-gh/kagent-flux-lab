@@ -2,6 +2,14 @@
 # kagent ModelConfig що ходить через agentgateway з OpenAI-format payload,
 # а gateway сам транслює до Anthropic native API.
 #
+# 🔧 TODO: track upstream fix у agentgateway для Anthropic tool_choice deserializer.
+#    Поточна реалізація — це **навмисний workaround**. Якщо upstream випустить
+#    реліз з виправленим Rust deserializer (натівно accepting Anthropic
+#    {"type": "auto"} shape), варто переключити provider назад на Anthropic для
+#    explicit semantics. Перевірити при кожному agentgateway upgrade — пошук
+#    issue з ключовими словами "ChatCompletionToolChoiceOption" або
+#    "tool_choice" у https://github.com/agentgateway/agentgateway/issues
+#
 # Чому provider: OpenAI а не Anthropic:
 #   agentgateway внутрішньо парсить body як OpenAI ChatCompletion схему
 #   (зокрема tool_choice — Rust untagged enum ChatCompletionToolChoiceOption).

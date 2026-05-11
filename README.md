@@ -175,3 +175,15 @@ make flux-bootstrap   # створити GitHub репу + Flux GitOps
   Restricted PSS би вимагала extra config.
 - **DNS вручну на router** — без ExternalDNS controller. У prod-стилі lab додав
   би external-dns + RFC2136 чи cloud provider.
+- **agentgateway admin UI exposed без auth** — `https://agentgateway.lab.local`
+  віддає live xDS dump, route config, secret refs усім хто резолвить DNS.
+  Свідомо лишено у lab — admin UI зручний для debugging architecture. Для prod:
+  OAuth2-proxy + OIDC (GitHub/Google) перед HTTPRoute, або зовсім видалити
+  HTTPRoute і access тільки через `kubectl port-forward`.
+- **OCI image tags замість digest pinning** — `agentgateway:v2.2.1`,
+  `kagent:0.9.2` mutable tags. Registry rewrite → інший image at reconcile. Для
+  prod: `crane digest oci://...` → `ref.digest: sha256:...` у OCIRepository.
+- **`provider: OpenAI` як workaround agentgateway tool_choice parser bug** — ADK
+  генерує OpenAI body → gateway translate до Anthropic native. Це навмисний
+  обхід. Track upstream issue для повернення до `provider: Anthropic` якщо bug
+  буде виправлений.
