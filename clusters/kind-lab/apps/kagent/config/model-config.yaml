@@ -30,9 +30,14 @@ spec:
   apiKeySecretKey: OPENAI_API_KEY
   openAI:
     # SDK appends /v1/chat/completions → final URL:
-    #   http://agentgateway-proxy.agentgateway-system.svc.cluster.local/v1/chat/completions
+    #   https://agentgateway-proxy.agentgateway-system.svc.cluster.local/v1/chat/completions
     # → matches HTTPRoute anthropic-completions (PathPrefix /v1/chat/completions)
     # → backend anthropic-completions (provider.anthropic, claude-opus-4-6)
     # → gateway translates OpenAI body → Anthropic native
     # → upstream api.anthropic.com/v1/messages
-    baseUrl: "http://agentgateway-proxy.agentgateway-system.svc.cluster.local"
+    #
+    # HTTPS бо HTTP listener на gateway видалено (тільки secure entrypoint).
+    # Trust: lab-ca-bundle ConfigMap mounted у pod через postRenderer patch у kagent
+    # HelmRelease, SSL_CERT_FILE env vary точкою на /etc/ssl/lab/ca.crt.
+    # Cert SAN включає agentgateway-proxy.agentgateway-system.svc.cluster.local.
+    baseUrl: "https://agentgateway-proxy.agentgateway-system.svc.cluster.local"

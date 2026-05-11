@@ -16,6 +16,12 @@ spec:
   dnsNames:
     - "*.lab.local"
     - "lab.local"
+    # In-cluster Service DNS — для kagent agent pods що ходять напряму
+    # до Service (без external DNS hop через router).
+    - "agentgateway-proxy.agentgateway-system.svc.cluster.local"
+    - "agentgateway-proxy.agentgateway-system.svc"
+    - "agentgateway-proxy.agentgateway-system"
+    - "agentgateway-proxy"
   issuerRef:
     name: lab-ca
     kind: ClusterIssuer

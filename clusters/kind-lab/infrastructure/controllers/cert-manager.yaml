@@ -49,3 +49,43 @@ spec:
     crds:
       enabled: true
       keep: true
+
+---
+# trust-manager (subproject cert-manager) — distributes trust bundles до ConfigMaps
+# у designated namespaces. Дозволяє pod'ам у будь-якій ns trust'ити lab CA для
+# in-cluster HTTPS зв'язку без manual cert mounts.
+#
+# Use case: kagent agent pods → HTTPS до agentgateway-proxy.
+# Bundle merges lab-ca + system CAs → ConfigMap у kagent ns →
+# pods mount + SSL_CERT_FILE env var.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: trust-manager
+  namespace: cert-manager
+spec:
+  dependsOn:
+    - name: cert-manager
+      namespace: cert-manager
+  interval: 5m
+  releaseName: trust-manager
+  chart:
+    spec:
+      chart: trust-manager
+      version: "v0.18.x"
+      sourceRef:
+        kind: HelmRepository
+        name: jetstack
+        namespace: cert-manager
+      interval: 1h
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+  values:
+    # Default Trust namespace — звідки trust-manager читає `default-package` ConfigMap (system CAs).
+    app:
+      trust:
+        namespace: cert-manager

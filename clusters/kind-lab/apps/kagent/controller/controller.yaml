@@ -68,6 +68,36 @@ spec:
               - op: replace
                 path: /metadata/labels/app.kubernetes.io~1version
                 value: ""
+          # Inject lab-ca trust у всі Agent pods — Python OpenAI SDK (httpx)
+          # читає SSL_CERT_FILE env. lab-ca-bundle ConfigMap створюється
+          # trust-manager автоматично у kagent ns (включає system CAs + lab-ca).
+          # Без цього — kagent pods → HTTPS до agentgateway → cert verify fail.
+          - target:
+              group: kagent.dev
+              version: v1alpha2
+              kind: Agent
+            patch: |
+              apiVersion: kagent.dev/v1alpha2
+              kind: Agent
+              metadata:
+                name: not-important
+              spec:
+                declarative:
+                  deployment:
+                    env:
+                      - name: SSL_CERT_FILE
+                        value: /etc/ssl/lab/ca.crt
+                    volumeMounts:
+                      - name: lab-ca-bundle
+                        mountPath: /etc/ssl/lab
+                        readOnly: true
+                    volumes:
+                      - name: lab-ca-bundle
+                        configMap:
+                          name: lab-ca-bundle
+                          items:
+                            - key: ca.crt
+                              path: ca.crt
   values:
     # Global tag override — chart's template default falls back to це
     tag: "0.9.2"

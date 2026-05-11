@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - metallb-pool.yaml
   - cert-manager-issuers.yaml
+  - trust-bundle.yaml

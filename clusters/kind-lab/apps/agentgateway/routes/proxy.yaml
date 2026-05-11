@@ -12,20 +12,13 @@ spec:
       kind: AgentgatewayParameters
       name: agentgateway-proxy
   listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      allowedRoutes:
-        namespaces:
-          from: All
-    # HTTPS listener з wildcard hostname — SNI-based routing на *.lab.local.
-    # Один cert обслуговує kagent.lab.local, agentgateway.lab.local тощо.
-    # TLS terminate на gateway — клієнт ↔ gateway по TLS, gateway ↔ pod plain HTTP.
-    # Certificate lab-local-wildcard-tls видає cert-manager (lab-ca ClusterIssuer).
+    # HTTPS-only — єдиний secure entrypoint. HTTP listener видалено.
+    # Hostname не вказано → listener accepts будь-який SNI; cert lab-local-wildcard-tls
+    # покриває *.lab.local + in-cluster Service DNS (через extended dnsNames).
+    # In-cluster kagent agent pods trust lab-ca через trust-manager Bundle.
     - name: https
       protocol: HTTPS
       port: 443
-      hostname: "*.lab.local"
       tls:
         mode: Terminate
         certificateRefs:
@@ -34,19 +27,3 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: agentgateway-proxy-http
-  namespace: agentgateway-system
-spec:
-  gatewayClassName: agentgateway
-  listeners:
-  - protocol: HTTP
-    port: 80
-    name: http
-    allowedRoutes:
-      namespaces:
-        from: All
