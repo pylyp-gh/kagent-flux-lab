@@ -8,7 +8,9 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    branch: main
+    # Branch test-e2e (на main branch цей file має branch: main —
+    # це per-branch divergence для multi-environment setup).
+    branch: test-e2e
   secretRef:
     name: flux-system
   url: https://github.com/pylyp-gh/kagent-flux-lab.git
