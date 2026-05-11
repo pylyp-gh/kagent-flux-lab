@@ -84,3 +84,27 @@ spec:
         tag: "0.9.2"
       agentImage:
         tag: "0.9.2"
+    # Override modelConfig для всіх chart-managed agents — ходять через
+    # agentgateway (claude-via-gateway → Anthropic Claude). Default був
+    # default-model-config (real OpenAI, stub key fail), що марно.
+    # Тепер кожен з 10 default agents має робочий backend через gateway.
+    k8s-agent:
+      modelConfigRef: claude-via-gateway
+    helm-agent:
+      modelConfigRef: claude-via-gateway
+    istio-agent:
+      modelConfigRef: claude-via-gateway
+    cilium-debug-agent:
+      modelConfigRef: claude-via-gateway
+    cilium-manager-agent:
+      modelConfigRef: claude-via-gateway
+    cilium-policy-agent:
+      modelConfigRef: claude-via-gateway
+    kgateway-agent:
+      modelConfigRef: claude-via-gateway
+    observability-agent:
+      modelConfigRef: claude-via-gateway
+    promql-agent:
+      modelConfigRef: claude-via-gateway
+    argo-rollouts-conversion-agent:
+      modelConfigRef: claude-via-gateway
