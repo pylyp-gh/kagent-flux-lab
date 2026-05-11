@@ -1,6 +1,6 @@
 ---
 # HTTPRoute для agentgateway admin UI через HTTPS на тому самому Gateway.
-# Hostname agentgateway.lab.local → Service agentgateway-proxy:15010 (admin port).
+# Hostname agentgateway.ash.ph.lab → Service agentgateway-proxy:15010 (admin port).
 # Admin endpoint обслуговується socat sidecar (port 15010 → 15000 на localhost).
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -12,7 +12,7 @@ spec:
     - name: agentgateway-proxy
       namespace: agentgateway-system
   hostnames:
-    - agentgateway.lab.local
+    - agentgateway.ash.ph.lab
   rules:
     - backendRefs:
         - name: agentgateway-proxy

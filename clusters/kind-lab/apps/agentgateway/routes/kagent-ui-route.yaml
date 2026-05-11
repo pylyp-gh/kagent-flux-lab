@@ -4,8 +4,8 @@
 # різний Host header → різний backend.
 #
 # Доступ: додати у /etc/hosts на хості:
-#   192.168.97.200 kagent.lab.local
-# Тоді: http://kagent.lab.local
+#   192.168.97.200 kagent.ash.ph.lab
+# Тоді: http://kagent.ash.ph.lab
 #
 # kagent-ui Service — звичайний K8s Service (kind=Service default).
 # agentgateway controller поважає стандартні Gateway API backendRef'и,
@@ -20,7 +20,7 @@ spec:
     - name: agentgateway-proxy
       namespace: agentgateway-system
   hostnames:
-    - kagent.lab.local
+    - kagent.ash.ph.lab
   rules:
     - backendRefs:
         - name: kagent-ui

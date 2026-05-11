@@ -13,8 +13,8 @@ spec:
       name: agentgateway-proxy
   listeners:
     # HTTPS-only — єдиний secure entrypoint. HTTP listener видалено.
-    # Hostname не вказано → listener accepts будь-який SNI; cert lab-local-wildcard-tls
-    # покриває *.lab.local + in-cluster Service DNS (через extended dnsNames).
+    # Hostname не вказано → listener accepts будь-який SNI; cert ash-ph-lab-wildcard-tls
+    # покриває *.ash.ph.lab + in-cluster Service DNS (через extended dnsNames).
     # In-cluster kagent agent pods trust lab-ca через trust-manager Bundle.
     - name: https
       protocol: HTTPS
@@ -23,7 +23,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: lab-local-wildcard-tls
+            name: ash-ph-lab-wildcard-tls
       allowedRoutes:
         namespaces:
           from: All

@@ -5,7 +5,7 @@
 #
 # Чому потрібен HTTPS: kagent UI використовує crypto.randomUUID() з Web Crypto API,
 # який доступний ТІЛЬКИ у Secure Context (HTTPS, або localhost виняток).
-# Через http://kagent.lab.local на kind-lab — insecure → API undefined → UI crash.
+# Через http://kagent.ash.ph.lab на kind-lab — insecure → API undefined → UI crash.
 apiVersion: v1
 kind: Namespace
 metadata:

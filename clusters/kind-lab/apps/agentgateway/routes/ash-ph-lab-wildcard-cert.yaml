@@ -1,21 +1,21 @@
 ---
-# Wildcard certificate для всіх *.lab.local hostname.
+# Wildcard certificate для всіх *.ash.ph.lab hostname.
 # Один Secret обслуговує kagent UI, agentgateway admin UI, і будь-які майбутні sub-domains.
 # Підписується lab-ca ClusterIssuer (self-signed root, infrastructure/configs).
 #
-# Гateway listener https використовує цей cert + hostname "*.lab.local" — SNI matches усі sub-domains.
+# Гateway listener https використовує цей cert + hostname "*.ash.ph.lab" — SNI matches усі sub-domains.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: lab-local-wildcard
+  name: ash-ph-lab-wildcard
   namespace: agentgateway-system
 spec:
-  secretName: lab-local-wildcard-tls
+  secretName: ash-ph-lab-wildcard-tls
   duration: 2160h0m0s # 90 days
   renewBefore: 360h0m0s # 15 days
   dnsNames:
-    - "*.lab.local"
-    - "lab.local"
+    - "*.ash.ph.lab"
+    - "ash.ph.lab"
     # In-cluster Service DNS — для kagent agent pods що ходять напряму
     # до Service (без external DNS hop через router).
     - "agentgateway-proxy.agentgateway-system.svc.cluster.local"
