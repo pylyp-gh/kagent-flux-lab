@@ -64,6 +64,28 @@ spec:
   dependsOn:
     - name: agentgateway-controller
 ---
+# Stub Secrets для kagent agents — applied BEFORE kagent-controller (Helm)
+# щоб Secrets exist до того як Agent CRDs створюються через HelmRelease →
+# pods spawn → namesly need Secret. Без цього split'у HelmRelease.wait блокує
+# install (pods CrashLoop без Secret) → Stalled.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kagent-stubs
+  namespace: flux-system
+spec:
+  interval: 1m
+  retryInterval: 1m
+  timeout: 2m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/kind-lab/apps/kagent/stubs
+  prune: true
+  wait: true
+  dependsOn:
+    - name: apps-base
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -81,6 +103,7 @@ spec:
   wait: true
   dependsOn:
     - name: agentgateway-routes
+    - name: kagent-stubs
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease
