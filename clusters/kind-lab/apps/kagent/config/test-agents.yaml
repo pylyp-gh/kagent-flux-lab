@@ -28,6 +28,22 @@ spec:
         to Anthropic Claude
       - Format responses as Markdown
     tools: []
+    # Trust lab-ca для HTTPS до agentgateway (gateway-only secure entrypoint).
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
 
 ---
 apiVersion: kagent.dev/v1alpha2
@@ -49,3 +65,19 @@ spec:
       - Keep responses concise — running on small local model
       - Format responses as Markdown
     tools: []
+    # Trust lab-ca для HTTPS до agentgateway.
+    deployment:
+      env:
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/lab/ca.crt
+      volumeMounts:
+        - name: lab-ca-bundle
+          mountPath: /etc/ssl/lab
+          readOnly: true
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
