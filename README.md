@@ -35,7 +35,7 @@ lives declaratively in a separate GitHub repo, reconciled by Flux.
 │  │           └─► trust patches: SSL_CERT_FILE + lab-ca mount │   │
 │  └───────────────────────────────────────────────────────────┘   │
 │                                                                  │
-│  Single MetalLB IP 192.168.97.200 → agentgateway-proxy           │
+│  Single MetalLB IP 192.168.97.200 → Service agentgateway-proxy   │
 │  ▼ TLS terminate ▼ HTTPRoute SNI/path routing                    │
 │     • https://kagent.ash.ph.lab       → kagent-ui Service         │
 │     • https://agentgateway.ash.ph.lab → agentgateway-proxy:15010  │
@@ -50,11 +50,14 @@ lives declaratively in a separate GitHub repo, reconciled by Flux.
 
 ## Networking & TLS
 
-**One `LoadBalancer` Service for the whole stack** — `agentgateway-proxy` holds
-a single MetalLB IP `192.168.97.200`. All HTTP(S) traffic (browser → UI,
-in-cluster pod → model) flows through this gateway. It's a **production-
-inspired pattern** — `agentgateway` plays the role of ingress + LLM router at
-the same time.
+**One Gateway API `Gateway` for the whole stack** — `agentgateway-proxy`
+(`gateway.networking.k8s.io/v1`) declares a single HTTPS listener on port 443.
+The `agentgateway` controller materialises that Gateway into a Deployment +
+`LoadBalancer` Service of the same name, and MetalLB assigns the Service the
+single IP `192.168.97.200`. All HTTP(S) traffic (browser → UI, in-cluster pod →
+model) hits that listener and is fanned out by `HTTPRoute` hostname/path
+matching. It's a **production-inspired pattern** — `agentgateway` plays the role
+of ingress + LLM router at the same time.
 
 **HTTPS-only.** Browsers require Secure Context for the Web Crypto API
 (`crypto.randomUUID()` in the Next.js UI). So the HTTP listener was removed
@@ -255,5 +258,57 @@ directory per cluster).
   filtering) before storage.
 - **Single-replica MetalLB controller + speaker per worker** — single point of
   LB IP allocation failure. Multi-replica + leader election preferred in prod.
-- **No observability stack** (Prometheus, OTel, Grafana, Loki). Phase 12+ — add
-  OTel Collector + log redaction.
+- **No observability stack** (Prometheus, OTel, Grafana, Loki) — see Roadmap
+  below for the planned OTel Collector + Vector + log-redaction pipeline.
+
+## Roadmap
+
+### Supply-chain hardening (partial gitless OCI GitOps)
+
+Move from today's "Git source + OCI-pinned vendor charts" to a **two-layer trust
+model** where own manifests are also signed OCI artifacts:
+
+- **CI render + push** — GitHub Actions runs `kustomize build` on every path
+  under `clusters/kind-lab/`, packs the rendered YAML as an OCI artifact, and
+  `oras push`-es it to `ghcr.io/<owner>/kagent-flux-lab/manifests:<sha>`.
+- **Cosign keyless signing** — Fulcio + GitHub OIDC, no key custody. Signer
+  identity is the workflow ref; transparency log lives in Sigstore Rekor.
+- **Flux `OCIRepository.spec.verify`** — source-controller refuses to pull the
+  artifact unless the cosign signature matches the configured
+  `matchOidcIdentity` (issuer + subject regex).
+- **Kyverno `ClusterPolicy` with `verifyImages`** — admission-time second layer.
+  Flux already verifies on pull, but Kyverno catches out-of-band `kubectl apply`
+  from a compromised admin path.
+- **SLSA L3 provenance** (optional) — `slsa-github-generator` emits an
+  `.intoto.jsonl` attestation pushed alongside the artifact; Kyverno policy can
+  require both signature + provenance.
+
+### Other planned extensions
+
+- **Observability stack** — OTel Collector for metrics/traces → Prometheus +
+  Grafana; **Vector** as the log-shipping pipeline between agentgateway stdout
+  and Loki, with a `redact` transform to mask Anthropic API keys and prompt
+  bodies on the `debug`-level traffic before storage.
+- **NetworkPolicy / Cilium zone separation** — agents may egress only to
+  `agentgateway-proxy`; the proxy may egress only to `api.anthropic.com` and the
+  Mac-host Ollama port. Default-deny everywhere else.
+- **PodDisruptionBudget + `replicas: 2`** for `agentgateway`, `kagent`, and
+  MetalLB controller, so `kubectl drain` survives without downtime.
+- **OAuth2-proxy + OIDC** in front of `agentgateway.ash.ph.lab` to gate the
+  admin UI (xDS / route config / secret refs) behind GitHub or Google login.
+- **External-DNS** with RFC2136 or cloud-provider controller, replacing the
+  hand-maintained DNS entries on the home router.
+- **Provider switch back to native Anthropic** in ModelConfigs once the upstream
+  `tool_choice` parser bug is fixed (we currently use `provider: OpenAI` with
+  gateway-side translation as a workaround).
+
+### Documentation TODO
+
+- **Day 2 upgrade workflow** — explicit recipe for bumping a vendor chart
+  (`crane digest` → update `ref.tag` + `ref.digest` → `git push` →
+  `flux reconcile`).
+- **`make smoke-test` recipe** — end-to-end happy-path verifier: DNS resolves,
+  HTTPS handshake against the lab CA, kagent → Claude round-trip returns a 200
+  with a sane body, in-cluster `SSL_CERT_FILE` mount is populated.
+- **Mermaid sequence diagram** — browser → kagent UI → agentgateway → Anthropic,
+  annotated with TLS handoff, SSE streaming, and trust-bundle lookup.
