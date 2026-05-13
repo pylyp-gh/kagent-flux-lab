@@ -1,0 +1,80 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: headlamp
+  namespace: headlamp
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: headlamp
+      version: 0.42.0
+      sourceRef:
+        kind: HelmRepository
+        name: headlamp
+        namespace: headlamp
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    fullnameOverride: headlamp
+    replicaCount: 1
+
+    service:
+      type: ClusterIP
+      port: 80
+
+    # Read-only RBAC: bind SA to built-in `view` ClusterRole instead of the
+    # chart default `cluster-admin`. `view` aggregates rules from any
+    # ClusterRole labeled `rbac.authorization.k8s.io/aggregate-to-view=true`,
+    # which already covers Flux (flux-view-flux-system) and cert-manager
+    # (cert-manager-view). kagent.dev / gateway.networking.k8s.io /
+    # agentgateway CRDs are NOT aggregated yet — add explicit ClusterRole
+    # with the aggregate-to-view label if you want them visible.
+    clusterRoleBinding:
+      create: true
+      clusterRoleName: view
+
+    config:
+      pluginsDir: /build/plugins
+      watchPlugins: true
+      # Headlamp 0.40+ requires a token to log in (no built-in skip-auth
+      # flag). Persistent 7-day session reduces friction for lab use:
+      # paste token once per week, no daily re-login. Production would tie
+      # this to OIDC (config.oidc.*) for SSO instead.
+      sessionTTL: 604800
+
+    # Flux plugin shipped via the canonical Headlamp initContainer pattern:
+    # the plugin image carries its bundle at /plugins/, copies into a shared
+    # emptyDir volume, and the main container reads from /build/plugins.
+    initContainers:
+      - name: headlamp-plugin-flux
+        image: ghcr.io/headlamp-k8s/headlamp-plugin-flux:v0.6.0
+        imagePullPolicy: IfNotPresent
+        command:
+          - /bin/sh
+          - -c
+          - mkdir -p /build/plugins && cp -r /plugins/* /build/plugins/ && chown -R 100:101 /build
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          runAsNonRoot: false
+        volumeMounts:
+          - name: headlamp-plugins
+            mountPath: /build/plugins
+
+    volumeMounts:
+      - name: headlamp-plugins
+        mountPath: /build/plugins
+
+    volumes:
+      - name: headlamp-plugins
+        emptyDir: {}
+
+    # HTTPRoute lives separately in apps/agentgateway/routes/ to match the
+    # repo convention (all routes colocated). Chart-native httpRoute disabled.

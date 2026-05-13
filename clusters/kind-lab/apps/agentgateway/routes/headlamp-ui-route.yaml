@@ -1,0 +1,21 @@
+---
+# HTTPRoute that exposes the Headlamp UI via HTTPS through the shared
+# agentgateway-proxy Gateway. Hostname `flux.ash.ph.lab` resolves to the
+# MetalLB IP 192.168.97.200 via the wildcard router DNS entry.
+# Wildcard cert *.ash.ph.lab covers the SNI; agentgateway terminates TLS
+# at port 443 and forwards plain HTTP to Headlamp Service:80.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: headlamp
+  namespace: headlamp
+spec:
+  parentRefs:
+    - name: agentgateway-proxy
+      namespace: agentgateway-system
+  hostnames:
+    - flux.ash.ph.lab
+  rules:
+    - backendRefs:
+        - name: headlamp
+          port: 80

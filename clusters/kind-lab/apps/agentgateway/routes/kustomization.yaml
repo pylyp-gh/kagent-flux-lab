@@ -8,3 +8,4 @@ resources:
   - kagent-ui-route.yaml
   - ash-ph-lab-wildcard-cert.yaml
   - agentgateway-ui-route.yaml
+  - headlamp-ui-route.yaml
