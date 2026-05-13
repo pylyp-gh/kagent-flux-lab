@@ -9,3 +9,4 @@ resources:
   - ash-ph-lab-wildcard-cert.yaml
   - agentgateway-ui-route.yaml
   - headlamp-ui-route.yaml
+  - qdrant-ui-route.yaml

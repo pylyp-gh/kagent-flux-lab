@@ -1,0 +1,43 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: qdrant
+  namespace: qdrant
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: qdrant
+      version: 1.18.0
+      sourceRef:
+        kind: HelmRepository
+        name: qdrant
+        namespace: qdrant
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    fullnameOverride: qdrant
+    replicaCount: 1
+
+    # Single-node lab — disable internal cluster consensus to skip the
+    # extra TCP listener on :6335. doc2vec writer + querydoc reader both
+    # speak plain REST on :6333; gRPC :6334 stays available for future
+    # use (Qdrant client SDKs default to gRPC for bulk operations).
+    config:
+      cluster:
+        enabled: false
+      service:
+        enable_tls: false
+
+    # PVC persists the collection across pod restarts. 2 GiB is well above
+    # the lab's expected footprint (~few hundred chunks × 768d float32 ≈
+    # under 5 MiB raw vectors plus metadata).
+    persistence:
+      accessModes: ["ReadWriteOnce"]
+      size: 2Gi
