@@ -1,0 +1,19 @@
+---
+# Registers the in-cluster querydoc MCP server with kagent so Agents can
+# call its `queryDocumentation` tool. querydoc serves the streamable HTTP
+# transport on port 8080 — kagent connects directly to the Service DNS.
+apiVersion: kagent.dev/v1alpha2
+kind: RemoteMCPServer
+metadata:
+  name: querydoc
+  namespace: kagent
+spec:
+  description: |
+    Self-referential RAG MCP server. Embeds the kagent-flux-lab repo
+    documentation (README, manifests, comments) into an in-cluster Qdrant
+    collection via Ollama (nomic-embed-text, 768d). Exposes the
+    queryDocumentation tool — Agents call it to ground answers about the
+    lab architecture in the actual project state.
+  url: https://querydoc.ash.ph.lab/mcp
+  protocol: STREAMABLE_HTTP
+  timeout: 30s

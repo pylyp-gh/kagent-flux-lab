@@ -1,0 +1,31 @@
+---
+# HTTPRoute that routes MCP tool traffic from kagent Agents through the
+# shared agentgateway-proxy to the querydoc MCP server (in-cluster reader
+# of the Qdrant vector DB populated by the doc2vec writer in Phase C).
+#
+# Why route MCP traffic through the gateway rather than direct pod-to-pod
+# Service DNS: completes the "agentgateway is the single ingress + LLM
+# router + tool proxy" narrative. Three traffic classes funnel through one
+# Gateway resource:
+#   - UI traffic    (HTTPRoute backendRef=Service)        ← kagent UI, gateway admin UI, Headlamp, Qdrant
+#   - LLM API       (HTTPRoute backendRef=AgentgatewayBackend) ← Anthropic, Ollama completions
+#   - MCP tools     (HTTPRoute backendRef=Service)        ← querydoc (this file), future tools
+#
+# Hostname querydoc.ash.ph.lab covered by the wildcard *.ash.ph.lab cert
+# already terminated at the gateway listener:443. No path rewrite — MCP
+# endpoint /mcp passes through directly to the backend.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: querydoc-mcp
+  namespace: kagent
+spec:
+  parentRefs:
+    - name: agentgateway-proxy
+      namespace: agentgateway-system
+  hostnames:
+    - querydoc.ash.ph.lab
+  rules:
+    - backendRefs:
+        - name: kagent-querydoc
+          port: 8080

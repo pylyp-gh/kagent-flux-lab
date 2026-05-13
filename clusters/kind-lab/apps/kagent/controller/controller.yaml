@@ -79,6 +79,68 @@ spec:
           # kagent controller's next client-side Update drops the field.
           # Via a separate Flux Kustomization (kagent-config), kustomize-controller
           # claims ownership with its own field manager — conflict-free, persistent.
+
+          # kagent-controller trust mount — controller validates each
+          # RemoteMCPServer URL at registration (calls /mcp initialize, fetches
+          # tool list). When the URL points at the gateway over HTTPS
+          # (querydoc.ash.ph.lab), Go's default HTTPS client doesn't trust the
+          # self-signed lab-ca → ACCEPTED: False, agents can't see the tool.
+          # SSL_CERT_FILE → bundle includes Mozilla defaults + lab-ca (Bundle
+          # source `useDefaultCAs: true`), so no loss of public trust roots.
+          - target:
+              kind: Deployment
+              name: kagent-controller
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: kagent-controller
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: controller
+                        env:
+                          - name: SSL_CERT_FILE
+                            value: /etc/ssl/lab-ca/ca.crt
+                        volumeMounts:
+                          - name: lab-ca-bundle
+                            mountPath: /etc/ssl/lab-ca
+                            readOnly: true
+                    volumes:
+                      - name: lab-ca-bundle
+                        configMap:
+                          name: lab-ca-bundle
+
+          # querydoc Deployment trust mount — patches the subchart's rendered
+          # Deployment directly (no kagent controller involvement → SSA conflict
+          # does not apply). Mounts the trust-manager Bundle ConfigMap so the
+          # MCP server's Node.js HTTPS client trusts the self-signed lab-ca
+          # presented by agentgateway-proxy when calling Ollama embeddings.
+          - target:
+              kind: Deployment
+              name: kagent-querydoc
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: kagent-querydoc
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: querydoc
+                        env:
+                          - name: NODE_EXTRA_CA_CERTS
+                            value: /etc/ssl/lab-ca/ca.crt
+                        volumeMounts:
+                          - name: lab-ca-bundle
+                            mountPath: /etc/ssl/lab-ca
+                            readOnly: true
+                    volumes:
+                      - name: lab-ca-bundle
+                        configMap:
+                          name: lab-ca-bundle
   values:
     # Global tag override — chart's template default falls back to this
     tag: "0.9.2"
@@ -112,3 +174,44 @@ spec:
       modelConfigRef: claude-via-gateway
     argo-rollouts-conversion-agent:
       modelConfigRef: claude-via-gateway
+
+    # querydoc subchart — exposes `queryDocumentation` MCP tool that queries
+    # the in-cluster Qdrant collection seeded by the doc2vec writer (Phase C).
+    # Lives inside the kagent OCI chart bundle; only enabled here.
+    # Image override pulls our fork (kagent-dev/doc2vec#82) for OPENAI_BASE_URL
+    # support — points the SDK at the agentgateway-proxy /ollama route.
+    querydoc:
+      enabled: true
+      # Default fullname stays `kagent-querydoc` (subchart prepends release
+      # name). External reach routes through agentgateway-proxy via HTTPRoute
+      # `querydoc.ash.ph.lab` (see apps/agentgateway/routes/querydoc-mcp-route.yaml).
+      # kagent Agents call MCP at that hostname, gateway terminates TLS and
+      # forwards to backendRef `kagent-querydoc:8080`.
+      image:
+        registry: ghcr.io
+        repository: pylyp-gh/doc2vec/mcp
+        # Tag + digest pin (multi-arch index — linux/amd64, linux/arm64).
+        # Refresh: `crane digest ghcr.io/pylyp-gh/doc2vec/mcp:feat-openai-base-url`
+        # Rationale + upstream PR link: see FORKS.md at repo root.
+        tag: feat-openai-base-url@sha256:a004e7e1cc358d86c46cd2ae3ddc15a9c3b9209f5a5387b8cda322b16e8c00e2
+        pullPolicy: IfNotPresent
+      service:
+        type: ClusterIP
+        port: 8080
+      logLevel: info
+      config:
+        VECTOR_DB_TYPE: qdrant
+        QDRANT_URL: http://qdrant.qdrant.svc.cluster.local:6333
+        EMBEDDING_PROVIDER: openai
+        OPENAI_MODEL: nomic-embed-text
+        # baseURL hits agentgateway's /ollama-embed route — distinct from
+        # /ollama chat route because AgentgatewayBackend ai-mode validates
+        # chat payloads (`messages: [...]`) and rejects embedding payloads
+        # (`input: ...`). The /ollama-embed route uses a `static` backend
+        # (plain TCP forward, no chat semantics) → embeddings pass through.
+        # URLRewrite strips /ollama-embed and prepends /v1 → Ollama's
+        # /v1/embeddings (OpenAI-compatible).
+        OPENAI_BASE_URL: https://agentgateway-proxy.agentgateway-system.svc.cluster.local/ollama-embed
+      openai:
+        # Ollama doesn't validate the key but OpenAI SDK requires non-empty.
+        apiKey: ollama

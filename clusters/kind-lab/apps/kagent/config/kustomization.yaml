@@ -9,6 +9,8 @@ resources:
   - qwen-model-config.yaml
   - agent-trust-stubs.yaml
   - test-agents.yaml
+  - doc-agent.yaml
+  - querydoc-mcp.yaml
 
 # Apply lab CA trust patch to every Agent labelled lab.cert-trust=enabled
 # (the chart-managed agents listed in agent-trust-stubs.yaml). Single source

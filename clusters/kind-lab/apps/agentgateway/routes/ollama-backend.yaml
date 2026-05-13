@@ -54,6 +54,23 @@ spec:
       host: ollama.agentgateway-system.svc.cluster.local
       port: 11434
 ---
+# Static (plain TCP/HTTP forward) backend for Ollama embeddings path.
+# AgentgatewayBackend with `spec.ai.provider.openai` is chat-mode — it
+# expects `messages: [...]` payloads, validates them as chat completions,
+# and rejects `input: ...` embedding payloads with 503 "missing field
+# messages". `spec.static` skips the chat semantics entirely: pure TCP
+# proxy to host:port. Embeddings pass through verbatim to Ollama's
+# OpenAI-compatible /v1/embeddings.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: ollama-embed
+  namespace: agentgateway-system
+spec:
+  static:
+    host: ollama.agentgateway-system.svc.cluster.local
+    port: 11434
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -64,6 +81,25 @@ spec:
     - name: agentgateway-proxy
       namespace: agentgateway-system
   rules:
+    # Embeddings path — routed via static backend (no chat-logic interference).
+    # Place BEFORE /ollama rule so longer-prefix /ollama-embed matches first.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ollama-embed
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /v1
+      backendRefs:
+        - name: ollama-embed
+          namespace: agentgateway-system
+          group: agentgateway.dev
+          kind: AgentgatewayBackend
+    # Chat completions path — through ai-provider backend that adds OpenAI
+    # chat semantics (token tracking, model translation, etc.).
     - matches:
         - path:
             type: PathPrefix
