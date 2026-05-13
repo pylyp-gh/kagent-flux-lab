@@ -38,9 +38,13 @@ lives declaratively in a separate GitHub repo, reconciled by Flux.
 │  Single MetalLB IP 192.168.97.200 → Service agentgateway-proxy   │
 │  ▼ TLS terminate ▼ HTTPRoute SNI/path routing                    │
 │     • https://kagent.ash.ph.lab       → kagent-ui Service         │
+│     • https://flux.ash.ph.lab         → headlamp Service          │
+│     • https://qdrant.ash.ph.lab       → qdrant Service:6333       │
+│     • https://querydoc.ash.ph.lab     → kagent-querydoc Service   │
 │     • https://agentgateway.ash.ph.lab → agentgateway-proxy:15010  │
 │     • https://...local/v1/messages   → AgentgatewayBackend       │
-│     • https://...local/ollama/...    → Mac host Ollama           │
+│     • https://...local/ollama/...    → Mac host Ollama (chat)    │
+│     • https://...local/ollama-embed  → Mac host Ollama (embeds)  │
 └──────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -71,8 +75,10 @@ FQDN). Pods read lab-ca via **trust-manager Bundle** → ConfigMap in the `kagen
 ns → mounted into pod → `SSL_CERT_FILE` env. Python httpx sees the bundle, TLS
 handshake succeeds.
 
-**DNS on home router** — `kagent.ash.ph.lab` and `agentgateway.ash.ph.lab`
-resolve to `192.168.97.200` (MetalLB IP) on all devices in the LAN.
+**DNS on home router** — a single wildcard entry `*.ash.ph.lab` →
+`192.168.97.200` (MetalLB IP) resolves every hostname under the zone (currently
+`kagent`, `flux`, `qdrant`, `querydoc`, `agentgateway`; future `tracing`, etc.)
+for all devices in the LAN. Per-host entries unnecessary.
 
 ## agentgateway as the single ingress
 
@@ -94,6 +100,93 @@ This **replaces a traditional ingress controller** (nginx-ingress, traefik) +
 **LLM proxy layer** (LiteLLM, OpenRouter) with a single component. Trade-off —
 less flexibility than separate layers, but faster for a lab.
 
+## UI access
+
+Three browser UIs share the same MetalLB IP via hostname-based routing. HTTPS
+terminates at the gateway with the `*.ash.ph.lab` wildcard cert signed by
+self-signed `lab-ca` (accept browser warning once, or import the CA into
+Keychain for a clean trust experience).
+
+### kagent UI — `https://kagent.ash.ph.lab`
+
+Agent management dashboard: list / create / chat with Agents, view ModelConfigs,
+MCP toolservers. **No authentication** (deliberate lab choice; production would
+gate behind OAuth2-proxy + OIDC — see Roadmap).
+
+### agentgateway admin UI — `https://agentgateway.ash.ph.lab`
+
+Live xDS dump, route config, backend secret refs (read-only debugging endpoint
+via the socat sidecar on port 15010). **No authentication** — intentional
+anti-pattern for lab introspection; do not replicate in prod.
+
+### Headlamp + Flux plugin — `https://flux.ash.ph.lab`
+
+Kubernetes dashboard with Flux sidebar (GitRepositories, Kustomizations,
+HelmReleases, OCIRepositories visible). **Token required** — Headlamp 0.40+
+removed the anonymous-access option as a security hardening; there is no
+`--no-auth` flag.
+
+Generate a 7-day token bound to the `headlamp` ServiceAccount and paste into the
+login screen:
+
+```sh
+kubectl -n headlamp create token headlamp --duration=168h | pbcopy
+```
+
+`sessionTTL: 604800` (chart value) matches the token duration — one paste per
+week.
+
+**Read-only RBAC.** The ServiceAccount binds to the **built-in `view`
+ClusterRole**, not `cluster-admin` (chart default overridden via
+`clusterRoleBinding.clusterRoleName: view`). `view` uses an _aggregation rule_:
+it auto-includes any ClusterRole tagged
+`rbac.authorization.k8s.io/aggregate-to-view=true`. In our cluster that covers
+Flux CRDs (`flux-view-flux-system`) and cert-manager (`cert-manager-view`) out
+of the box.
+
+**Deliberately not visible without extra RBAC:**
+
+- `Secrets` — built-in `view` excludes them by design (raw API keys leak risk;
+  clipboard equals exfiltration in a "read-only" dashboard).
+- `kagent.dev/*` (Agent, ModelConfig, MCPServer) — kagent does not ship an
+  aggregate-to-view ClusterRole.
+- `gateway.networking.k8s.io/*` (HTTPRoute, Gateway) — Gateway API CRDs are not
+  aggregated either.
+
+To make a specific CRD visible, ship a custom ClusterRole with the aggregation
+label:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kagent-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+  - apiGroups: ["kagent.dev"]
+    resources: ["agents", "modelconfigs", "mcpservers", "toolservers"]
+    verbs: ["get", "list", "watch"]
+```
+
+Apply once → `view` re-aggregates at runtime → Headlamp's existing token gains
+visibility on the new objects with no Helm upgrade or restart.
+
+### Qdrant dashboard — `https://qdrant.ash.ph.lab`
+
+Vector DB browser — inspect collections (`kagent-flux-lab`,
+`kagent-flux-lab-code`), view individual points + metadata + vector previews.
+Read-only by browser (no auth — REST API also accessible at the same hostname,
+e.g., `https://qdrant.ash.ph.lab/collections`).
+
+### querydoc MCP server — `https://querydoc.ash.ph.lab/mcp`
+
+Streamable HTTP MCP endpoint used by the `doc-agent` (and any future kagent
+Agent that registers querydoc as a tool source). Exposes three tools:
+`query_documentation`, `query_code`, `get_chunks`. Backed by the two Qdrant
+collections populated by the embedding Job. Not a browser UI — programmatic
+endpoint for MCP clients, but reachable via the same gateway pattern.
+
 ## Quick start
 
 ```bash
@@ -112,8 +205,10 @@ make flux-bootstrap   # create GitHub repo + Flux GitOps
 # Otherwise Flux will sync the existing SealedSecret which the cluster can't decrypt.
 
 # after bootstrap (~5 min reconcile):
-# 1. add DNS on router: kagent.ash.ph.lab + agentgateway.ash.ph.lab → MetalLB IP
+# 1. add a single wildcard DNS entry on router: *.ash.ph.lab → MetalLB IP (192.168.97.200)
 # 2. (optional) add lab-ca cert to Keychain trust → no browser warning
+# 3. for Headlamp UI: generate 7-day token →
+#    kubectl -n headlamp create token headlamp --duration=168h | pbcopy
 ```
 
 ## Multi-cluster / test environment setup
@@ -185,7 +280,7 @@ directory per cluster).
     │       └── trust-bundle.yaml             #   lab-ca-bundle (trust-manager)
     └── apps/
         ├── base/
-        │   ├── namespaces.yaml               # ns: agentgateway-system, kagent
+        │   ├── namespaces.yaml               # ns: agentgateway-system, kagent, headlamp, qdrant
         │   └── sealed/anthropic.yaml         # SealedSecret with Anthropic key
         ├── agentgateway/
         │   ├── controller/controller.yaml    # agentgateway HelmRelease + OCIRepository (digest pinned)
@@ -196,7 +291,21 @@ directory per cluster).
         │       ├── anthropic-backend.yaml    # AgentgatewayBackend + 2 HTTPRoutes
         │       ├── ollama-backend.yaml       # headless Service + EndpointSlice + Backend
         │       ├── kagent-ui-route.yaml      # HTTPRoute → kagent-ui Service
-        │       └── agentgateway-ui-route.yaml # HTTPRoute → admin UI :15010
+        │       ├── agentgateway-ui-route.yaml # HTTPRoute → admin UI :15010
+        │       ├── headlamp-ui-route.yaml    # HTTPRoute → headlamp Service
+        │       ├── qdrant-ui-route.yaml      # HTTPRoute → qdrant Service:6333
+        │       └── querydoc-mcp-route.yaml   # HTTPRoute → kagent-querydoc Service:8080
+        ├── headlamp/
+        │   └── controller/                   # Headlamp UI + Flux plugin (initContainer)
+        │       ├── helmrepository.yaml       # source: kubernetes-sigs.github.io/headlamp/
+        │       └── helmrelease.yaml          # view-only RBAC + 7-day sessionTTL
+        ├── qdrant/
+        │   └── controller/                   # Qdrant vector DB (HelmRelease + 2 GiB PVC)
+        │       ├── helmrepository.yaml
+        │       └── helmrelease.yaml
+        ├── qdrant-embeddings/                # doc2vec writer Job — populates Qdrant collections
+        │   ├── configmap.yaml                # doc2vec config: Ollama embedding + 2 sources
+        │   └── job.yaml                      # initContainer git-clone + doc2vec writer container
         └── kagent/
             ├── controller/controller.yaml    # kagent HelmRelease (postRenderer) + OCIRepository
             ├── stubs/openai-stub.yaml        # stub Secret applied EARLY (secret-before-pod)
@@ -205,7 +314,9 @@ directory per cluster).
                 ├── qwen-model-config.yaml    # qwen-via-gateway ModelConfig
                 ├── agent-trust-stubs.yaml    # 10 chart-managed Agent stubs (label-tagged)
                 ├── agent-trust-patch.yaml    # single SMP applied via labelSelector (DRY)
-                └── test-agents.yaml          # git-managed flux-anthropic-test + flux-ollama-test
+                ├── test-agents.yaml          # git-managed flux-anthropic-test + flux-ollama-test
+                ├── doc-agent.yaml            # self-referential RAG agent (uses querydoc tools)
+                └── querydoc-mcp.yaml         # RemoteMCPServer pointing kagent at querydoc
 ```
 
 ## Why these choices
@@ -261,6 +372,13 @@ directory per cluster).
 - **No observability stack** (Prometheus, OTel, Grafana, Loki) — see Roadmap
   below for the planned OTel Collector + Vector + log-redaction pipeline.
 
+## Forks & dependencies
+
+A few of the images consumed by this lab come from our own forks rather than
+upstream — see [`FORKS.md`](FORKS.md) for per-fork rationale, upstream PR links,
+and the convergence plan once changes land in their respective upstream
+projects.
+
 ## Roadmap
 
 ### Supply-chain hardening (partial gitless OCI GitOps)
@@ -286,9 +404,10 @@ model** where own manifests are also signed OCI artifacts:
 ### Other planned extensions
 
 - **Observability stack** — OTel Collector for metrics/traces → Prometheus +
-  Grafana; **Vector** as the log-shipping pipeline between agentgateway stdout
-  and Loki, with a `redact` transform to mask Anthropic API keys and prompt
-  bodies on the `debug`-level traffic before storage.
+  Grafana (UI exposed at `tracing.ash.ph.lab`); **Vector** as the log-shipping
+  pipeline between agentgateway stdout and Loki, with a `redact` transform to
+  mask Anthropic API keys and prompt bodies on the `debug`-level traffic before
+  storage.
 - **NetworkPolicy / Cilium zone separation** — agents may egress only to
   `agentgateway-proxy`; the proxy may egress only to `api.anthropic.com` and the
   Mac-host Ollama port. Default-deny everywhere else.
