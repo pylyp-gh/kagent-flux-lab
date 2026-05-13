@@ -1,0 +1,83 @@
+---
+# One-shot writer Job that clones the kagent-flux-lab repo and embeds its
+# content into the Qdrant collections seeded by the qdrant-controller
+# Kustomization. Replaces the host-side `docker run doc2vec` workflow with
+# a fully Flux-managed pipeline — the entire lab is reproducible from a
+# fresh cluster + `flux bootstrap` with no host-side scripts.
+#
+# Uses our doc2vec fork (ghcr.io/pylyp-gh/doc2vec) for Ollama embedding
+# endpoint support and an arm64 native-binding rebuild. Full rationale,
+# upstream PR link, and convergence plan: see FORKS.md at repo root.
+#
+# Image digests pinned (tag + @sha256) — supply chain discipline. Refresh
+# with `crane digest <ref>` if updating the tag.
+#
+# Re-run semantics: K8s Jobs are immutable once spec is set. To re-embed
+# after repo changes, delete the completed Job and reconcile:
+#   kubectl -n qdrant delete job doc2vec-embed-kagent-flux-lab
+#   flux -n flux-system reconcile kustomization qdrant-embeddings
+# doc2vec's content-hash dedup means re-runs only embed changed chunks,
+# so cost is proportional to the diff, not the whole repo.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: doc2vec-embed-kagent-flux-lab
+  namespace: qdrant
+spec:
+  ttlSecondsAfterFinished: 604800 # auto-cleanup pod after 7 days
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: doc2vec-embed
+        app.kubernetes.io/part-of: kagent-flux-lab
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        # Shallow clone of the lab repo into a shared emptyDir. Public
+        # GitHub repo, no auth needed. Pinned image tag for reproducibility.
+        - name: git-clone
+          # Tag + digest pin. Refresh: `crane digest alpine/git:2.49.0`
+          image: alpine/git:2.49.0@sha256:b0f8f1fe681f50e35fd4e80052035d04e0c5908fda57a11b08e645aeaaebfc62
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "Cloning kagent-flux-lab repo..."
+              git clone --depth 1 https://github.com/pylyp-gh/kagent-flux-lab.git /repo
+              echo "Cloned. Contents:"
+              ls -la /repo
+          volumeMounts:
+            - name: repo
+              mountPath: /repo
+      containers:
+        - name: doc2vec
+          # Tag + digest pin (multi-arch index — linux/amd64, linux/arm64).
+          # Refresh: `crane digest ghcr.io/pylyp-gh/doc2vec:feat-openai-base-url`
+          image: ghcr.io/pylyp-gh/doc2vec:feat-openai-base-url@sha256:0798677fba7f22439d8746e4dd1e58fe6336d10775109d7a5cbfb1645af9d8cc
+          imagePullPolicy: IfNotPresent
+          command:
+            - node
+            - /app/dist/doc2vec.js
+            - /etc/doc2vec/config.yaml
+          volumeMounts:
+            - name: repo
+              mountPath: /repo
+              readOnly: true
+            - name: config
+              mountPath: /etc/doc2vec
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+      volumes:
+        - name: repo
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: doc2vec-config

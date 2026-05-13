@@ -1,0 +1,64 @@
+---
+# doc2vec writer configuration. Embeds the kagent-flux-lab repo's docs
+# (markdown + manifests) into the `kagent-flux-lab` collection and its
+# bash scripts + Dockerfiles into `kagent-flux-lab-code` collection.
+#
+# Both Qdrant URL and Ollama embedding endpoint stay in-cluster: the
+# Job pod doesn't need the gateway hop or lab-ca trust mount. The
+# gateway-routed `/ollama-embed` path is reserved for runtime callers
+# (querydoc MCP) where the "everything through the gateway" narrative
+# matters for traffic observability.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doc2vec-config
+  namespace: qdrant
+data:
+  config.yaml: |
+    embedding:
+      provider: openai
+      dimension: 768
+      openai:
+        api_key: ollama
+        model: nomic-embed-text
+        base_url: http://ollama.agentgateway-system.svc.cluster.local:11434/v1
+
+    sources:
+      # Markdown + YAML — heading-aware chunking.
+      - type: local_directory
+        product_name: kagent-flux-lab
+        version: v1
+        path: /repo
+        include_extensions:
+          - .md
+          - .yaml
+          - .yml
+        recursive: true
+        max_size: 1048576
+        database_config:
+          type: qdrant
+          params:
+            qdrant_url: http://qdrant.qdrant.svc.cluster.local
+            qdrant_port: 6333
+            collection_name: kagent-flux-lab
+
+      # Bash + Dockerfiles — AST-aware Chonkie + Tree-sitter chunking.
+      - type: code
+        product_name: kagent-flux-lab
+        version: v1
+        source: local_directory
+        path: /repo
+        include_extensions:
+          - .sh
+          - .ts
+          - .py
+          - .go
+          - .Dockerfile
+        recursive: true
+        max_size: 1048576
+        database_config:
+          type: qdrant
+          params:
+            qdrant_url: http://qdrant.qdrant.svc.cluster.local
+            qdrant_port: 6333
+            collection_name: kagent-flux-lab-code

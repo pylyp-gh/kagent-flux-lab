@@ -187,3 +187,26 @@ spec:
       kind: HelmRelease
       name: qdrant
       namespace: qdrant
+---
+# Initial vector DB population — clones the kagent-flux-lab repo and
+# runs the doc2vec writer as a one-shot K8s Job, populating the
+# `kagent-flux-lab` and `kagent-flux-lab-code` Qdrant collections.
+# Replaces the host-side docker run workflow with a fully Flux-managed
+# init step — the entire lab reproducible from `flux bootstrap`.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: qdrant-embeddings
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/kind-lab/apps/qdrant-embeddings
+  prune: true
+  wait: false # Job completion takes minutes; don't block downstream Kustomizations
+  dependsOn:
+    - name: qdrant-controller
