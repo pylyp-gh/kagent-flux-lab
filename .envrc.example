@@ -8,7 +8,10 @@ export ANTHROPIC_API_KEY=""
 export CLUSTER_NAME="kind-lab"
 export GITHUB_USER=""           # github username, e.g. "phsethz"
 export GITHUB_REPO="kagent-flux-lab"
-export GITHUB_BRANCH="main"
+# Optional — uncomment to pin Flux to a specific branch. When unset, scripts
+# auto-detect the currently checked-out branch (lab-1, lab-2, main, etc.), so
+# `git checkout lab-2 && make full` bootstraps Flux against `lab-2`.
+# export GITHUB_BRANCH="main"
 # FLUX_PATH = canonical GitOps tree path in git. NOT derived from CLUSTER_NAME
 # (those are decoupled — see README "Multi-cluster" section). Keep this value
 # even if you rename CLUSTER_NAME for a parallel test cluster.

@@ -7,7 +7,12 @@ set -euo pipefail
 CLUSTER_NAME="${CLUSTER_NAME:-kind-lab}"
 GITHUB_USER="${GITHUB_USER:?GITHUB_USER not set — fill .envrc}"
 GITHUB_REPO="${GITHUB_REPO:-kagent-flux-lab}"
-GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
+# Default branch = currently checked-out branch. Lets the attendee `git checkout
+# lab-2` (or any lab baseline branch) and have `make full` bootstrap Flux
+# against THAT branch — preserves the frozen-lab guarantee. Explicit
+# GITHUB_BRANCH env var still overrides for advanced workflows.
+DETECTED_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo main)
+GITHUB_BRANCH="${GITHUB_BRANCH:-$DETECTED_BRANCH}"
 # FLUX_PATH = path in git to the GitOps tree (where infrastructure.yaml + apps.yaml live).
 # Previously default = clusters/${CLUSTER_NAME}, but that **couples** two
 # independent concepts:
@@ -37,11 +42,18 @@ if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
   git commit -m "feat: initial scripts, kind cluster config, README"
 fi
 
-# ---- 2. Rename branch to GITHUB_BRANCH if needed ---------------------------
-CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
-if [ "$CURRENT_BRANCH" != "$GITHUB_BRANCH" ]; then
-  say "Renaming local branch ${CURRENT_BRANCH} → ${GITHUB_BRANCH}"
+# ---- 2. Rename branch to GITHUB_BRANCH only on fresh init ------------------
+# Skip rename when caller is already on a named branch — assumes the attendee
+# intentionally checked out `lab-2` / `lab-3` / `main` etc. Rename only fires
+# when the script is run inside a freshly `git init`'d repo where the default
+# branch is `master` (or empty) and the target is `main`.
+CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+if [ "$CURRENT_BRANCH" = "master" ] && [ "$GITHUB_BRANCH" = "main" ]; then
+  say "Fresh repo on master — renaming local branch master → main"
   git branch -m "$GITHUB_BRANCH"
+elif [ "$CURRENT_BRANCH" != "$GITHUB_BRANCH" ] && [ -n "$CURRENT_BRANCH" ]; then
+  warn "On branch '$CURRENT_BRANCH' but GITHUB_BRANCH='$GITHUB_BRANCH' — leaving local branch alone."
+  warn "Flux source will point at '$GITHUB_BRANCH'. Set GITHUB_BRANCH=$CURRENT_BRANCH if that's wrong."
 fi
 
 # ---- 3. Create or sync GitHub repo -----------------------------------------

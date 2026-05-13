@@ -48,7 +48,9 @@ echo ""
 echo "== Env vars =="
 : "${CLUSTER_NAME:=kind-lab}"
 : "${GITHUB_REPO:=kagent-flux-lab}"
-: "${GITHUB_BRANCH:=main}"
+# Default branch = current checkout (lab-2, lab-1, main, etc.). Lets the
+# attendee branch-as-baseline pattern work without explicit env override.
+: "${GITHUB_BRANCH:=$(git symbolic-ref --short HEAD 2>/dev/null || echo main)}"
 
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
   ok "ANTHROPIC_API_KEY set (${#ANTHROPIC_API_KEY} chars)"
