@@ -18,6 +18,13 @@ metadata:
 spec:
   deployment:
     cmd: ./server
+    # args required: KMCP controller sets Pod command=[cmd] which overrides
+    # both the Dockerfile ENTRYPOINT and CMD. Without --http the binary
+    # defaults to stdio mode → reads EOF from absent stdin → exit 0 →
+    # CrashLoopBackOff. Explicit args here are the only way to keep HTTP.
+    args:
+      - "--http"
+      - ":8080"
     # Multi-arch image (linux/amd64, linux/arm64) built by GitHub Actions on
     # push to main; pinned by commit SHA for GitOps immutability. Public
     # GHCR — no imagePullSecret needed. See .github/workflows/build-push.yaml
