@@ -1,0 +1,26 @@
+---
+# HTTPRoute exposing ingest-orchestrator (A2A agent) on the public hostname
+# ingest.ash.ph.lab through agentgateway-proxy. External A2A peers can:
+#   GET  https://ingest.ash.ph.lab/.well-known/agent-card.json  → discovery
+#   POST https://ingest.ash.ph.lab/messages                     → SendMessage
+#
+# Mirrors the doc-writer-mcp-route + querydoc-mcp-route pattern: one hostname
+# per service, wildcard *.ash.ph.lab cert covers TLS. The Agent Card's
+# serviceEndpoint field (A2A_SERVICE_ENDPOINT env var) is populated to match
+# this hostname so external peers discovering the agent get a self-consistent
+# URL set.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ingest-orchestrator
+  namespace: ingest-orchestrator
+spec:
+  parentRefs:
+    - name: agentgateway-proxy
+      namespace: agentgateway-system
+  hostnames:
+    - ingest.ash.ph.lab
+  rules:
+    - backendRefs:
+        - name: ingest-orchestrator
+          port: 8080

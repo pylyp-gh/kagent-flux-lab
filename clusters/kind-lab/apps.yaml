@@ -234,3 +234,27 @@ spec:
   dependsOn:
     - name: apps-base
     - name: kagent-controller
+---
+# ingest-orchestrator — custom A2A agent (Lab 4) with full MCP client
+# capabilities. Phase 1 delivers Agent Card + echo skill; later phases
+# integrate doc-writer-mcp via MCP client, bridge Sampling to Anthropic,
+# and surface Elicitation via A2A streaming. Standalone Go service (not
+# a kagent Agent CRD).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ingest-orchestrator-controller
+  namespace: flux-system
+spec:
+  interval: 1m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/kind-lab/apps/ingest-orchestrator/controller
+  prune: true
+  wait: true
+  dependsOn:
+    - name: apps-base
+    - name: agentgateway-routes

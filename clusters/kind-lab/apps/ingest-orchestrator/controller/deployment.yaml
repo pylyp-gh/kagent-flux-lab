@@ -1,0 +1,80 @@
+---
+# ingest-orchestrator — A2A agent with full MCP client capabilities (Lab 4).
+# Phase 1 ships HTTP server + Agent Card + echo skill. Subsequent phases
+# add MCP client integration, Sampling bridge to Anthropic, and Elicitation
+# bridge through A2A streaming.
+#
+# Not a kagent Agent CRD — this is an independent Go service. Lives in its
+# own namespace for isolation; ServiceAccount minimal (no cluster access
+# needed; only outbound HTTPS to agentgateway-proxy).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingest-orchestrator
+  namespace: ingest-orchestrator
+  labels:
+    app.kubernetes.io/name: ingest-orchestrator
+    app.kubernetes.io/component: a2a-agent
+    app.kubernetes.io/part-of: kagent-flux-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingest-orchestrator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ingest-orchestrator
+    spec:
+      containers:
+        - name: orchestrator
+          # Multi-arch (linux/amd64, linux/arm64) built by GitHub Actions on
+          # push to main; pinned by commit SHA for GitOps immutability.
+          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-d4a156b
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--http"
+            - ":8080"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: A2A_SERVICE_ENDPOINT
+              value: "https://ingest.ash.ph.lab"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingest-orchestrator
+  namespace: ingest-orchestrator
+  labels:
+    app.kubernetes.io/name: ingest-orchestrator
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ingest-orchestrator
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
