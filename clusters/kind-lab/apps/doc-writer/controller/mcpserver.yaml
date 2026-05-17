@@ -25,11 +25,24 @@ spec:
     args:
       - "--http"
       - ":8080"
+    # Capability degradation tuning for the deployed clients:
+    # - kagent agent runtime does NOT declare Sampling or Elicitation
+    #   capabilities → ss.CreateMessage / ss.Elicit calls would fail.
+    # - ENABLE_SAMPLING=false bypasses L5 LLM gate entirely. L0/L1/L2
+    #   defence layers still active (no LLM dependency).
+    # - ENABLE_ELICITATION stays true: server falls back to sensible
+    #   defaults automatically when client lacks the capability
+    #   (auto-create collection on bootstrap, auto-decline on duplicates).
+    # MCP Inspector clients can override these via different MCPServer
+    # if they want to exercise the full Tier Макс showcase end-to-end.
+    env:
+      - name: ENABLE_SAMPLING
+        value: "false"
     # Multi-arch image (linux/amd64, linux/arm64) built by GitHub Actions on
     # push to main; pinned by commit SHA for GitOps immutability. Public
     # GHCR — no imagePullSecret needed. See .github/workflows/build-push.yaml
     # in pylyp-gh/doc-writer-mcp.
-    image: ghcr.io/pylyp-gh/doc-writer-mcp:sha-1778842
+    image: ghcr.io/pylyp-gh/doc-writer-mcp:sha-95ee3ff
     port: 8080
   httpTransport:
     path: /mcp
