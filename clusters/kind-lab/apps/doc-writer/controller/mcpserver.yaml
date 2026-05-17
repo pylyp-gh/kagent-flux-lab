@@ -25,18 +25,21 @@ spec:
     args:
       - "--http"
       - ":8080"
-    # Capability degradation tuning for the deployed clients:
-    # - kagent agent runtime does NOT declare Sampling or Elicitation
-    #   capabilities → ss.CreateMessage / ss.Elicit calls would fail.
-    # - ENABLE_SAMPLING=false bypasses L5 LLM gate entirely. L0/L1/L2
-    #   defence layers still active (no LLM dependency).
-    # - ENABLE_ELICITATION stays true: server falls back to sensible
-    #   defaults automatically when client lacks the capability
-    #   (auto-create collection on bootstrap, auto-decline on duplicates).
-    # MCP Inspector clients can override these via different MCPServer
-    # if they want to exercise the full Tier Макс showcase end-to-end.
+    # Capability landscape after Phase 3:
+    # - ingest-orchestrator declares Sampling capability via its
+    #   CreateMessageHandler — handler translates server's CreateMessage
+    #   request into an OpenAI ChatCompletion call against agentgateway.
+    # - kagent agent runtime still does NOT declare Sampling — writer-agent
+    #   will surface tool errors when L5 fires. Acceptable trade-off:
+    #   ingest-orchestrator becomes the Tier Макс happy path; writer-agent
+    #   remains as a no-capability degradation demo for completeness.
+    # - ENABLE_ELICITATION stays true: server still falls back to sensible
+    #   defaults when client lacks elicitation (auto-create collection on
+    #   bootstrap, auto-decline on duplicates). Phase 4 will add the
+    #   elicitation bridge so ingest-orchestrator can stream interactive
+    #   prompts back through A2A.
     env:
-      ENABLE_SAMPLING: "false"
+      ENABLE_SAMPLING: "true"
     # Multi-arch image (linux/amd64, linux/arm64) built by GitHub Actions on
     # push to main; pinned by commit SHA for GitOps immutability. Public
     # GHCR — no imagePullSecret needed. See .github/workflows/build-push.yaml

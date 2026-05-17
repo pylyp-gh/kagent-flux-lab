@@ -30,8 +30,11 @@ spec:
         - name: orchestrator
           # Multi-arch (linux/amd64, linux/arm64) built by GitHub Actions on
           # push to main; pinned by commit SHA for GitOps immutability.
-          # Phase 2 image: Claude tool-use loop + MCP client integration.
-          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-ce9b259
+          # Phase 3 image: adds Sampling bridge — CreateMessageHandler that
+          # translates MCP sampling/createMessage requests into OpenAI
+          # ChatCompletion calls through the gateway. Client now advertises
+          # sampling capability during the initialize handshake.
+          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-3cde1a8
           imagePullPolicy: IfNotPresent
           args:
             - "--http"
