@@ -1,0 +1,29 @@
+---
+# Registers doc-writer-mcp with kagent as a remote MCP server reachable
+# through agentgateway-proxy on hostname doc-writer.ash.ph.lab. Mirrors
+# the querydoc RemoteMCPServer pattern — every MCP server in the lab
+# (reader, writer, kagent-tools, kagent-grafana-mcp) is registered as a
+# RemoteMCPServer, routing tool calls through the gateway for consistent
+# auth/audit/observability.
+#
+# Backend: HTTPRoute doc-writer-mcp in doc-writer ns (see
+# clusters/kind-lab/apps/agentgateway/routes/doc-writer-mcp-route.yaml).
+# Wildcard cert *.ash.ph.lab covers the hostname, trust patch on agents
+# provides the CA bundle for TLS handshake.
+apiVersion: kagent.dev/v1alpha2
+kind: RemoteMCPServer
+metadata:
+  name: doc-writer-mcp
+  namespace: kagent
+spec:
+  description: |
+    Documentation writer MCP server. Embeds incoming text via Ollama
+    (nomic-embed-text, 768d) and stores in Qdrant `doc-writer` collection
+    with layered defence (L0 structural, L1 lexical + injection regex +
+    language gate, L2 SHA-256 dedup, L5 LLM quality gate via Sampling).
+    Exposes the add_document tool — Agents call it to ingest new content
+    with two-step Elicitation (collection bootstrap, duplicate handling)
+    and two-step Sampling (verdict, metadata extraction).
+  url: https://doc-writer.ash.ph.lab/mcp
+  protocol: STREAMABLE_HTTP
+  timeout: 30s

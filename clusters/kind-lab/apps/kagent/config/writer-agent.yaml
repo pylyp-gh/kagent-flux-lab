@@ -59,9 +59,8 @@ spec:
     tools:
       - type: McpServer
         mcpServer:
-          apiGroup: ""
-          kind: Service
+          apiGroup: kagent.dev
+          kind: RemoteMCPServer
           name: doc-writer-mcp
-          namespace: doc-writer
           toolNames:
             - add_document
