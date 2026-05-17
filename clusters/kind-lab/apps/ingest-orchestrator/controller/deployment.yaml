@@ -30,7 +30,8 @@ spec:
         - name: orchestrator
           # Multi-arch (linux/amd64, linux/arm64) built by GitHub Actions on
           # push to main; pinned by commit SHA for GitOps immutability.
-          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-d4a156b
+          # Phase 2 image: Claude tool-use loop + MCP client integration.
+          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-ce9b259
           imagePullPolicy: IfNotPresent
           args:
             - "--http"
@@ -42,6 +43,31 @@ spec:
           env:
             - name: A2A_SERVICE_ENDPOINT
               value: "https://ingest.ash.ph.lab"
+            # Claude (via agentgateway) — same path kagent agents use.
+            # gateway parses OpenAI body, translates to Anthropic /v1/messages
+            # using anthropic-secret server-side. Any non-empty placeholder
+            # key satisfies the OpenAI SDK auth header; real key never leaves
+            # the gateway's Secret store.
+            - name: OPENAI_BASE_URL
+              value: "https://agentgateway-proxy.agentgateway-system.svc.cluster.local/v1/"
+            - name: OPENAI_API_KEY
+              value: "stub-gateway-injects-real-key"
+            - name: MODEL_NAME
+              value: "claude-opus-4-6"
+            # MCP server target — doc-writer-mcp via gateway hostname so all
+            # in-cluster MCP traffic flows through one ingress (matches the
+            # RemoteMCPServer pattern used by kagent agents).
+            - name: MCP_SERVER_URL
+              value: "https://doc-writer.ash.ph.lab/mcp"
+            # TLS trust for both endpoints above — distributed by
+            # trust-manager Bundle "lab-ca-bundle" (see
+            # infrastructure/configs/trust-bundle.yaml).
+            - name: SSL_CERT_FILE
+              value: /etc/ssl/lab/ca.crt
+          volumeMounts:
+            - name: lab-ca-bundle
+              mountPath: /etc/ssl/lab
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /healthz
@@ -61,6 +87,13 @@ spec:
             limits:
               cpu: 200m
               memory: 128Mi
+      volumes:
+        - name: lab-ca-bundle
+          configMap:
+            name: lab-ca-bundle
+            items:
+              - key: ca.crt
+                path: ca.crt
 ---
 apiVersion: v1
 kind: Service

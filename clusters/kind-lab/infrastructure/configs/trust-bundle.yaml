@@ -6,7 +6,9 @@
 #   - useDefaultCAs: true — Mozilla system CA bundle (for HTTPS to external endpoints)
 #   - secret: lab-ca-key-pair — our self-signed CA from the cert-manager ns
 #
-# Target: ConfigMap lab-ca-bundle key ca.crt in ns kagent + agentgateway-system.
+# Target: ConfigMap lab-ca-bundle key ca.crt in ns kagent +
+# agentgateway-system + ingest-orchestrator (Lab 4 custom A2A agent that
+# does outbound TLS to the gateway for both LLM and MCP traffic).
 # Namespace selection via built-in label kubernetes.io/metadata.name.
 apiVersion: trust.cert-manager.io/v1alpha1
 kind: Bundle
@@ -28,3 +30,4 @@ spec:
           values:
             - kagent
             - agentgateway-system
+            - ingest-orchestrator
