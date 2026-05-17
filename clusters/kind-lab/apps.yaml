@@ -210,3 +210,27 @@ spec:
   wait: false # Job completion takes minutes; don't block downstream Kustomizations
   dependsOn:
     - name: qdrant-controller
+---
+# doc-writer-mcp — custom MCP server (Lab 3) with two-step Elicitation
+# (collection bootstrap + duplicate handling) and two-step Sampling
+# (LLM quality gate + metadata extraction). Image pre-loaded into kind
+# nodes via `kmcp build --kind-load`; KMCP controller (in kagent ns) owns
+# Deployment+Service reconciliation for the MCPServer CRD here.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: doc-writer-controller
+  namespace: flux-system
+spec:
+  interval: 1m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/kind-lab/apps/doc-writer/controller
+  prune: true
+  wait: true
+  dependsOn:
+    - name: apps-base
+    - name: kagent-controller

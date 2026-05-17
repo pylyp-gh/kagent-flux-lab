@@ -1,0 +1,26 @@
+---
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: doc-writer-mcp
+  namespace: doc-writer
+  annotations:
+    kmcp.dev/description: Documentation writer MCP — Qdrant ingest with Elicitation + Sampling
+    kmcp.dev/project-name: doc-writer-mcp
+  labels:
+    app.kubernetes.io/component: mcp-server
+    app.kubernetes.io/instance: doc-writer-mcp
+    app.kubernetes.io/managed-by: kmcp
+    app.kubernetes.io/name: doc-writer-mcp
+    app.kubernetes.io/part-of: kmcp
+    kmcp.dev/framework: mcp-go
+    kmcp.dev/version: 0.1.0
+spec:
+  deployment:
+    cmd: ./server
+    image: doc-writer-mcp:0.1.0
+    port: 8080
+  httpTransport:
+    path: /mcp
+    targetPort: 8080
+  transportType: http
