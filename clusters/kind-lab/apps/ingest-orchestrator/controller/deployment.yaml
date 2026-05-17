@@ -30,11 +30,12 @@ spec:
         - name: orchestrator
           # Multi-arch (linux/amd64, linux/arm64) built by GitHub Actions on
           # push to main; pinned by commit SHA for GitOps immutability.
-          # Phase 3 image: adds Sampling bridge — CreateMessageHandler that
-          # translates MCP sampling/createMessage requests into OpenAI
-          # ChatCompletion calls through the gateway. Client now advertises
-          # sampling capability during the initialize handshake.
-          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-3cde1a8
+          # Phase 4 image: adds Elicitation bridge — ElicitationHandler
+          # pushes "input-required" SSE events at the A2A peer and blocks
+          # on a per-correlation-ID channel until /messages:respond
+          # unblocks it. Two new HTTP endpoints: POST /messages:stream
+          # (SSE) and POST /messages:respond (companion).
+          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-6168692
           imagePullPolicy: IfNotPresent
           args:
             - "--http"
