@@ -36,7 +36,12 @@ spec:
     # MCP Inspector clients can override these via different MCPServer
     # if they want to exercise the full Tier Макс showcase end-to-end.
     env:
-      ENABLE_SAMPLING: "false"
+      # TEMPORARY: flipped to true for MCP Inspector verify run of L5 sampling
+      # flow. Revert back to "false" after Inspector capture so kagent
+      # writer-agent (no Sampling capability) does not break. Phase 3 of
+      # ingest-orchestrator will add a CreateMessageHandler — after that the
+      # flip becomes permanent.
+      ENABLE_SAMPLING: "true"
     # Multi-arch image (linux/amd64, linux/arm64) built by GitHub Actions on
     # push to main; pinned by commit SHA for GitOps immutability. Public
     # GHCR — no imagePullSecret needed. See .github/workflows/build-push.yaml
