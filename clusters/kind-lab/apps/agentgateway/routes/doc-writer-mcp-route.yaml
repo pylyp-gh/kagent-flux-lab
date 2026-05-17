@@ -1,0 +1,32 @@
+---
+# HTTPRoute that routes MCP tool traffic from external clients (Inspector,
+# kagent UI, A2A peers) through the shared agentgateway-proxy to the
+# doc-writer-mcp server in the doc-writer namespace.
+#
+# Mirrors the querydoc-mcp-route pattern — completes the "agentgateway is
+# the single ingress + LLM router + tool proxy" narrative for ALL MCP
+# servers in the lab, not just readers.
+#
+# Internal kagent-Agent → MCP traffic uses direct Service DNS (see
+# writer-agent.yaml). This route is the EXTERNAL face: any client that
+# reaches the gateway hostname `doc-writer.ash.ph.lab` gets forwarded to
+# the in-cluster MCP server. Powers Lab 4 A2A demos and Inspector
+# connectivity from outside the cluster.
+#
+# Hostname doc-writer.ash.ph.lab covered by *.ash.ph.lab wildcard cert
+# already terminated at the gateway listener:443.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: doc-writer-mcp
+  namespace: doc-writer
+spec:
+  parentRefs:
+    - name: agentgateway-proxy
+      namespace: agentgateway-system
+  hostnames:
+    - doc-writer.ash.ph.lab
+  rules:
+    - backendRefs:
+        - name: doc-writer-mcp
+          port: 8080

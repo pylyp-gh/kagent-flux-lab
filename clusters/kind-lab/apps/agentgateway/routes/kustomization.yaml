@@ -11,3 +11,4 @@ resources:
   - headlamp-ui-route.yaml
   - qdrant-ui-route.yaml
   - querydoc-mcp-route.yaml
+  - doc-writer-mcp-route.yaml

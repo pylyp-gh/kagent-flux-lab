@@ -11,6 +11,7 @@ resources:
   - test-agents.yaml
   - doc-agent.yaml
   - querydoc-mcp.yaml
+  - writer-agent.yaml
 
 # Apply lab CA trust patch to every Agent labelled lab.cert-trust=enabled
 # (the chart-managed agents listed in agent-trust-stubs.yaml). Single source
