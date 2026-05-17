@@ -18,7 +18,11 @@ metadata:
 spec:
   deployment:
     cmd: ./server
-    image: doc-writer-mcp:0.1.0
+    # Multi-arch image (linux/amd64, linux/arm64) built by GitHub Actions on
+    # push to main; pinned by commit SHA for GitOps immutability. Public
+    # GHCR — no imagePullSecret needed. See .github/workflows/build-push.yaml
+    # in pylyp-gh/doc-writer-mcp.
+    image: ghcr.io/pylyp-gh/doc-writer-mcp:sha-1778842
     port: 8080
   httpTransport:
     path: /mcp
