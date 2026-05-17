@@ -30,12 +30,12 @@ spec:
         - name: orchestrator
           # Multi-arch (linux/amd64, linux/arm64) built by GitHub Actions on
           # push to main; pinned by commit SHA for GitOps immutability.
-          # Phase 4 image: adds Elicitation bridge — ElicitationHandler
-          # pushes "input-required" SSE events at the A2A peer and blocks
-          # on a per-correlation-ID channel until /messages:respond
-          # unblocks it. Two new HTTP endpoints: POST /messages:stream
-          # (SSE) and POST /messages:respond (companion).
-          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-6168692
+          # Phase 4 image (concurrent-safe): per-request MCP session per
+          # streaming request, ElicitationHandler closure captures THIS
+          # request's SSE stream. No shared mutable state across concurrent
+          # streams. The shared sync /messages client retains a policy
+          # elicitation fallback for when there's no peer to ask.
+          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-eb344cc
           imagePullPolicy: IfNotPresent
           args:
             - "--http"
