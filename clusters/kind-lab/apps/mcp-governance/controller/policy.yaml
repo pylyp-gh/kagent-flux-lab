@@ -1,13 +1,14 @@
 ---
 # Cluster-scoped MCPGovernancePolicy that drives the scoring engine.
-# Tuned for kagent-flux-lab's current state — we declare what we ARE
-# doing today (agentgateway routing, TLS, hardened deployment) and leave
-# the not-yet-implemented controls (JWT, RBAC, CORS, rate limit) off so
-# the score reflects achievable baseline rather than aspirational gaps.
+# Tightened to "OWASP MCP Tier 1 aspirational" — flips all 9 controls
+# to true so the score reflects the gap between current lab state and
+# production-grade security baseline. Expected: score drops from 100
+# (everything we declared, we have) to something like 30-60 (revealing
+# JWT/RBAC/CORS/rate-limit gaps we have not yet addressed).
 #
-# As lab matures (JWT auth via kagent OAuth backend, CEL RBAC policies
-# on tool access, CORS for browser-side agents), flip the matching
-# require* booleans to true and re-score.
+# This is the educational view — see what work remains to be production
+# ready. To re-score against minimal baseline (current implementations
+# only), flip require* of NOT-YET-implemented controls back to false.
 #
 # AI agent enabled: forwards governance state to local Ollama at
 # host.docker.internal:11434 (qwen2.5:14b). The model adds reasoning +
@@ -19,18 +20,17 @@ metadata:
   labels:
     app.kubernetes.io/part-of: kagent-flux-lab
 spec:
-  # Architectural controls — these we have implemented:
+  # OWASP MCP Tier 1 — all required for production readiness.
+  # Current lab state: we have agentgateway routing + TLS + hardened
+  # deployment. The other 5 controls are tracking-as-gap.
   requireAgentGateway: true
   requireTLS: true
   requireHardenedDeployment: true
-
-  # Not yet implemented in this lab — surface as gaps in score:
-  requireJWTAuth: false
-  requireRBAC: false
-  requireCORS: false
-  requireRateLimit: false
-  requirePromptGuard: false # doc-writer-mcp has L1/L5 internally, but no
-                            # cluster-level prompt-guard policy CRD yet
+  requireJWTAuth: true
+  requireRBAC: true
+  requireCORS: true
+  requireRateLimit: true
+  requirePromptGuard: true
 
   scanInterval: "5m"
   maxToolsWarning: 10
