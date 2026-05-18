@@ -1,0 +1,46 @@
+---
+# HelmRelease for agentregistry-inventory — Kubernetes-native registry
+# for MCP servers, agents, skills & models (Lab 4 D3 — real Inventory).
+#
+# Replaces the stub CRDs we wrote earlier (SkillCatalog,
+# MCPServerCatalog у agentregistry.dev group) — upstream chart now
+# provides the canonical CRDs + a controller that watches running
+# kagent/MCP workloads + indexes them into the catalog.
+#
+# Image tag pinned to v0.5.4 (latest release at adoption time) — chart
+# appVersion is "latest" by default, which would be a moving target.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: agentregistry-inventory
+  namespace: agentregistry-inventory
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: ./charts/agentregistry
+      sourceRef:
+        kind: GitRepository
+        name: agentregistry-inventory
+        namespace: agentregistry-inventory
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    image:
+      tag: v0.5.4 # pin away from chart's "latest" default
+    # Disable upstream's Azure-AD-bearer-token gate. Lab is behind
+    # agentgateway with no auth currently — match the rest of the
+    # lab anti-pattern (intentional, documented).
+    disableAuth: true
+    # HTTPRoute disabled — we provide our own at agentgateway/routes/
+    # to keep all routes colocated там per repo convention.
+    httpRoute:
+      enabled: false
+    mcpRoute:
+      enabled: false

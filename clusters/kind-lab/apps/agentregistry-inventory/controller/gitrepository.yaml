@@ -1,0 +1,23 @@
+---
+# Upstream agentregistry-inventory Helm chart lives у git, not published
+# as an OCI artefact at the moment. Flux GitRepository pins a specific
+# release tag — image + CRDs reconciled from that ref.
+#
+# When upstream publishes OCI charts (or adds GHCR Helm registry), switch
+# к HelmRepository з type: oci pointing at the OCI url — chart spec
+# unchanged.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: agentregistry-inventory
+  namespace: agentregistry-inventory
+spec:
+  interval: 30m
+  url: https://github.com/den-vasyliev/agentregistry-inventory
+  ref:
+    tag: v0.5.4
+  ignore: |
+    # Pull only what we need — chart + CRDs.
+    /*
+    !/charts/agentregistry
+    !/config/crd

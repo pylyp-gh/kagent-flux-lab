@@ -259,6 +259,38 @@ spec:
     - name: apps-base
     - name: agentgateway-routes
 ---
+# agentregistry-inventory — Kubernetes-native AI infrastructure registry
+# (Lab 4 D3 — real Inventory). Provides the canonical CRDs in the
+# agentregistry.dev group (MCPServerCatalog, AgentCatalog, SkillCatalog,
+# ModelCatalog, RegistryDeployment, DiscoveryConfig) plus a controller
+# that auto-discovers running kagent/MCP workloads and indexes them.
+#
+# Sourced from upstream den-vasyliev/agentregistry-inventory at tag
+# v0.5.4 via Flux GitRepository — no fork needed (image already public
+# on GHCR; chart not on OCI yet so git source is correct mechanism).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: agentregistry-inventory
+  namespace: flux-system
+spec:
+  interval: 1m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/kind-lab/apps/agentregistry-inventory/controller
+  prune: true
+  wait: true
+  dependsOn:
+    - name: apps-base
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: agentregistry-inventory
+      namespace: agentregistry-inventory
+---
 # mcp-governance — AI-powered K8s-native governance scanner for MCP
 # infrastructure (Lab 4 #3). Discovers MCP servers, kagent agents,
 # agentgateway routes; scores cluster security posture across 9 OWASP-MCP
@@ -295,6 +327,10 @@ spec:
     - name: kagent-config
     - name: doc-writer-controller
     - name: ingest-orchestrator-controller
+    # agentregistry-inventory provides the real SkillCatalog +
+    # MCPServerCatalog CRDs that MCPG controller watches — must be
+    # installed first so MCPG's informers don't log "Failed to watch".
+    - name: agentregistry-inventory
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease
