@@ -15,3 +15,4 @@ resources:
   - ingest-orchestrator-route.yaml
   - mcpg-ui-route.yaml
   - writer-agent-route.yaml
+  - agentregistry-ui-route.yaml

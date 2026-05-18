@@ -1,0 +1,26 @@
+---
+# HTTPRoute exposing the agentregistry-inventory Web UI + HTTP API on
+# `registry.ash.ph.lab`. Chart embeds Next.js UI у the same controller
+# binary that serves the REST API on port 8080 — single Service, single
+# route. MCP server endpoint (port 8083) and metrics (port 8081) stay
+# in-cluster (no need to expose externally for the lab).
+#
+# When `mcpRoute.enabled: true` flipped у HelmRelease values, the chart
+# would render its own HTTPRoute for /mcp via agentgateway з token auth.
+# Keeping it disabled here: we have own pattern (RemoteMCPServer +
+# colocated routes) и want consistency across the lab.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: agentregistry-ui
+  namespace: agentregistry-inventory
+spec:
+  parentRefs:
+    - name: agentgateway-proxy
+      namespace: agentgateway-system
+  hostnames:
+    - registry.ash.ph.lab
+  rules:
+    - backendRefs:
+        - name: agentregistry-inventory-api
+          port: 8080
