@@ -30,12 +30,13 @@ spec:
         - name: orchestrator
           # Multi-arch (linux/amd64, linux/arm64) built by GitHub Actions on
           # push to main; pinned by commit SHA for GitOps immutability.
-          # Lab 4 макс image: adds delegate_to_writer_agent meta-tool —
-          # Claude can now choose between calling add_document directly via
-          # MCP OR delegating the full ingest pipeline to writer-agent via
-          # JSON-RPC `message/send` to its native A2A endpoint. True
-          # cross-agent coordination through A2A protocol v0.3.0.
-          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-d9604f6
+          # Lab 4 макс image (team coordinator): delegate_to_kagent_peer
+          # exposes 7 kagent A2A peers (writer-agent, doc-agent, k8s-agent,
+          # helm-agent, istio-agent, observability-agent, promql-agent).
+          # Claude can decompose a multi-domain user request into parallel
+          # delegations, then aggregate replies. A2A team coordination
+          # over JSON-RPC v0.3.0.
+          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-6011917
           imagePullPolicy: IfNotPresent
           args:
             - "--http"
