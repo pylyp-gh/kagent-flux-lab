@@ -1,0 +1,41 @@
+---
+# RBAC for the orchestrator's peer-discovery loop. The pod's
+# ServiceAccount token (auto-projected at
+# /var/run/secrets/kubernetes.io/serviceaccount/token) authenticates
+# directly to the Kubernetes API at https://kubernetes.default.svc —
+# no client-go dependency, just a small HTTP client із in-cluster TLS.
+#
+# Scope is minimal: list Agent CRDs у kagent ns. Reading each peer's
+# Agent Card happens over HTTP to the kagent Service (no RBAC needed
+# for that — the Agent Card is intentionally public per A2A spec).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ingest-orchestrator
+  namespace: ingest-orchestrator
+---
+# Cluster-scoped because Agent CRs live у kagent ns + we may eventually
+# want to discover across multiple namespaces. Verbs limited to get/list/watch
+# (the watch verb is not used today but stays here so future SDK swap
+# from polling to informer-based discovery doesn't need RBAC changes).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ingest-orchestrator-peer-discovery
+rules:
+  - apiGroups: ["kagent.dev"]
+    resources: ["agents"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ingest-orchestrator-peer-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ingest-orchestrator-peer-discovery
+subjects:
+  - kind: ServiceAccount
+    name: ingest-orchestrator
+    namespace: ingest-orchestrator

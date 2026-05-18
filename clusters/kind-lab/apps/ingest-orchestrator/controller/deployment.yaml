@@ -26,6 +26,9 @@ spec:
       labels:
         app.kubernetes.io/name: ingest-orchestrator
     spec:
+      # ServiceAccount with read access to agents.kagent.dev — feeds the
+      # peer auto-discovery loop. See rbac.yaml sibling resource.
+      serviceAccountName: ingest-orchestrator
       containers:
         - name: orchestrator
           # Multi-arch (linux/amd64, linux/arm64) built by GitHub Actions on
@@ -36,7 +39,7 @@ spec:
           # then aggregate replies. Per-peer timeout 180s; server WriteTimeout
           # 600s — handles long multi-agent meta-analysis tasks (cluster
           # state + docs Qdrant search + helm + cross-reference synthesis).
-          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-4348c8b
+          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-ecc60cf
           imagePullPolicy: IfNotPresent
           args:
             - "--http"
