@@ -1,0 +1,29 @@
+---
+# DiscoveryConfig — tells the agentregistry-inventory controller WHERE
+# to scan for MCP servers + kagent agents + skills + model configs.
+# Without this CR, controller spins idle and the UI stays empty.
+#
+# Single "local" environment targets our in-cluster namespaces.
+# discoveryEnabled: true → read-only inventory population;
+# deployEnabled: false → UI can browse but not deploy new resources
+# (avoid foot-gun in lab; flip later when we want one-click deploy UX).
+apiVersion: agentregistry.dev/v1alpha1
+kind: DiscoveryConfig
+metadata:
+  name: local
+  namespace: agentregistry-inventory
+spec:
+  environments:
+    - name: local
+      discoveryEnabled: true
+      deployEnabled: false
+      namespaces:
+        - kagent
+        - doc-writer
+        - ingest-orchestrator
+        - mcp-governance
+        - agentregistry-inventory
+      resourceTypes:
+        - MCPServer
+        - Agent
+        - ModelConfig
