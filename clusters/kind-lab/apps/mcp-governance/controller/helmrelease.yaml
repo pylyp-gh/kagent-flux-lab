@@ -1,0 +1,55 @@
+---
+# HelmRelease for mcp-governance — installs the controller + dashboard from
+# our forked OCI chart. The forked release workflow patches the chart's
+# values.yaml so image repository/tag/pullPolicy already point at our GHCR
+# registry; we only override the deployment-time variations we want.
+#
+# CRD installation is set to Skip — chart's crds/ directory has a known bug
+# (duplicate YAML keys in mcpgovernancepolicies CRD) that Helm doesn't fix
+# via postRenderer because Helm bypasses postRenderers for the crds/ dir
+# entirely. Instead, we apply our own fixed CRD as a standalone resource in
+# this same Kustomization (see crd-mcpgovernancepolicy.yaml). Reference for
+# the upstream bug: github.com/techwithhuz/mcp-security-governance/issues/27.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mcp-governance
+  namespace: mcp-governance
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: mcp-governance
+      version: "0.22.3"
+      sourceRef:
+        kind: HelmRepository
+        name: pylyp-charts
+        namespace: mcp-governance
+  install:
+    # Skip — we apply fixed CRDs ourselves (see crd-*.yaml siblings).
+    # Chart's crds/ directory has a duplicate-keys YAML bug in
+    # mcpgovernancepolicies.yaml that postRenderers can't reach.
+    crds: Skip
+    remediation:
+      retries: 3
+  upgrade:
+    crds: Skip
+    remediation:
+      retries: 3
+  values:
+    # Sample policy resources are broken anyway because of the CRD schema
+    # collapse. We install our own MCPGovernancePolicy from policy.yaml.
+    samples:
+      install: false
+
+    # We don't need the demo stub CRDs (AgentGateway, Kagent) — real ones
+    # are already installed by their respective Flux Kustomizations.
+    crds:
+      installExternal: false
+
+    # Dashboard service exposed via HTTPRoute on agentgateway-proxy
+    # (mcpg.ash.ph.lab) instead of the chart-default NodePort 30000.
+    # Consistent with the rest of the cluster (qdrant, kagent, headlamp).
+    dashboard:
+      service:
+        type: ClusterIP

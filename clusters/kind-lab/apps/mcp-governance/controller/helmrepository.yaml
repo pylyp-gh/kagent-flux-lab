@@ -1,0 +1,33 @@
+---
+# HelmRepository пointing to our fork's published OCI chart on GHCR.
+# Chart published by .github/workflows/release.yaml in pylyp-gh/mcp-security-governance
+# whenever a `v*` tag is pushed. Tag triggers multi-arch image build + chart
+# package + push to oci://ghcr.io/pylyp-gh/charts/mcp-governance:VERSION.
+#
+# OCI repositories don't need an index.yaml — Flux pulls chart metadata
+# directly from the OCI manifest. Faster + simpler than classic HTTPS Helm
+# repos. Single source of truth for both images (charts directory сусід to
+# controller/dashboard images on the same registry).
+#
+# Auth: package is public (set in repo Packages settings). No secretRef
+# needed. To switch back to private — add `secretRef` pointing at a
+# dockerconfigjson Secret in this namespace.
+#
+# One-time fork bootstrap step: GitHub Packages API does NOT support
+# PATCH visibility for personal-account packages (UI-only operation).
+# After first `v*` tag push to a fresh fork, visit each package's
+# Settings page → "Change visibility" → Public:
+#   - github.com/users/pylyp-gh/packages/container/mcp-governance-controller
+#   - github.com/users/pylyp-gh/packages/container/mcp-governance-dashboard
+#   - github.com/users/pylyp-gh/packages/container/charts%2Fmcp-governance
+# Once public, self-bootstrap (kind create → flux bootstrap) is fully
+# automated — no further manual steps per cluster recreation.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: pylyp-charts
+  namespace: mcp-governance
+spec:
+  type: oci
+  url: oci://ghcr.io/pylyp-gh/charts
+  interval: 30m

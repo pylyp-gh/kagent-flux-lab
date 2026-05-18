@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # CRDs first — applied before the HelmRelease so MCPGovernancePolicy CR
+  # (also in this Kustomization) can validate against the schema.
+  - crd-mcpgovernancepolicy.yaml
+  - crd-governanceevaluation.yaml
+  # Source + release.
+  - helmrepository.yaml
+  - helmrelease.yaml
+  # Cluster-level policy CR — applied to drive the scoring engine.
+  - policy.yaml

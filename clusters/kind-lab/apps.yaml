@@ -258,3 +258,45 @@ spec:
   dependsOn:
     - name: apps-base
     - name: agentgateway-routes
+---
+# mcp-governance — AI-powered K8s-native governance scanner for MCP
+# infrastructure (Lab 4 #3). Discovers MCP servers, kagent agents,
+# agentgateway routes; scores cluster security posture across 9 OWASP-MCP
+# Tier 1 categories; surfaces findings in Next.js dashboard at
+# mcpg.ash.ph.lab. AI scoring via local Ollama (qwen2.5:14b) on host.
+#
+# Forked from techwithhuz/mcp-security-governance — fork adds multi-arch
+# image build (release.yaml on v* tag) and ships through ghcr.io/pylyp-gh.
+# Chart's bundled CRD has a duplicate-keys YAML bug (upstream issue #27);
+# HelmRelease uses crds: Skip and we apply fixed CRDs from this path.
+#
+# Health checks include the policy CR so the Kustomization is marked
+# Ready only after the controller has produced its first GovernanceEvaluation.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: mcp-governance-controller
+  namespace: flux-system
+spec:
+  interval: 1m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/kind-lab/apps/mcp-governance/controller
+  prune: true
+  wait: true
+  dependsOn:
+    # Needs all the resources it scans to exist first so initial scoring
+    # is meaningful rather than reporting empty cluster.
+    - name: apps-base
+    - name: agentgateway-routes
+    - name: kagent-config
+    - name: doc-writer-controller
+    - name: ingest-orchestrator-controller
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: mcp-governance
+      namespace: mcp-governance

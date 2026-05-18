@@ -13,3 +13,4 @@ resources:
   - querydoc-mcp-route.yaml
   - doc-writer-mcp-route.yaml
   - ingest-orchestrator-route.yaml
+  - mcpg-ui-route.yaml

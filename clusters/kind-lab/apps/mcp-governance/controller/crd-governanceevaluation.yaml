@@ -1,0 +1,311 @@
+---
+# GovernanceEvaluation CRD — stores the controller's scoring output.
+# Unlike mcpgovernancepolicies, this CRD does NOT have the
+# duplicate-keys bug — schema renders correctly. Copied verbatim from
+# upstream chart with Helm-specific annotations stripped (we manage it
+# via Flux/Kustomize, not Helm). HelmRelease has crds: Skip so the
+# chart's bundled copy doesn't fight us.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: governanceevaluations.governance.mcp.io
+  labels:
+    app.kubernetes.io/name: mcp-governance
+    app.kubernetes.io/part-of: kagent-flux-lab
+spec:
+  group: governance.mcp.io
+  scope: Cluster
+  names:
+    plural: governanceevaluations
+    singular: governanceevaluation
+    kind: GovernanceEvaluation
+    shortNames:
+      - ge
+      - goveval
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Score
+          type: integer
+          jsonPath: .status.score
+        - name: Scope
+          type: string
+          jsonPath: .spec.evaluationScope
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Findings
+          type: integer
+          jsonPath: .status.findingsCount
+          priority: 1
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                policyRef:
+                  type: string
+                evaluationScope:
+                  type: string
+                  enum: ["cluster", "namespace", "resource"]
+                targetRef:
+                  type: object
+                  properties:
+                    apiGroup:
+                      type: string
+                    kind:
+                      type: string
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+            status:
+              type: object
+              properties:
+                score:
+                  type: integer
+                phase:
+                  type: string
+                lastEvaluationTime:
+                  type: string
+                  format: date-time
+                findingsCount:
+                  type: integer
+                findings:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      severity:
+                        type: string
+                        enum: ["Critical", "High", "Medium", "Low"]
+                      category:
+                        type: string
+                      title:
+                        type: string
+                      description:
+                        type: string
+                      impact:
+                        type: string
+                      remediation:
+                        type: string
+                      resourceRef:
+                        type: string
+                      namespace:
+                        type: string
+                      timestamp:
+                        type: string
+                resourceSummary:
+                  type: object
+                  properties:
+                    gatewaysFound:
+                      type: integer
+                    agentgatewayBackends:
+                      type: integer
+                    agentgatewayPolicies:
+                      type: integer
+                    httpRoutes:
+                      type: integer
+                    kagentAgents:
+                      type: integer
+                    kagentMCPServers:
+                      type: integer
+                    kagentRemoteMCPServers:
+                      type: integer
+                    compliantResources:
+                      type: integer
+                    nonCompliantResources:
+                      type: integer
+                    totalMCPEndpoints:
+                      type: integer
+                    exposedMCPEndpoints:
+                      type: integer
+                scoreBreakdown:
+                  type: object
+                  properties:
+                    agentGatewayScore:
+                      type: integer
+                    authenticationScore:
+                      type: integer
+                    authorizationScore:
+                      type: integer
+                    corsScore:
+                      type: integer
+                    tlsScore:
+                      type: integer
+                    promptGuardScore:
+                      type: integer
+                    rateLimitScore:
+                      type: integer
+                    toolScopeScore:
+                      type: integer
+                    hardenedDeploymentScore:
+                      type: integer
+                namespaceScores:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      namespace:
+                        type: string
+                      score:
+                        type: integer
+                      findings:
+                        type: integer
+                mcpServerScores:
+                  type: array
+                  description: "Per-MCP-server governance scores"
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                      source:
+                        type: string
+                      status:
+                        type: string
+                        enum: ["compliant", "warning", "failing", "critical"]
+                      score:
+                        type: integer
+                      toolCount:
+                        type: integer
+                      effectiveToolCount:
+                        type: integer
+                      criticalFindings:
+                        type: integer
+                      lastEvaluated:
+                        type: string
+                        format: date-time
+                      scoreBreakdown:
+                        type: object
+                        properties:
+                          gatewayRouting:
+                            type: integer
+                          authentication:
+                            type: integer
+                          authorization:
+                            type: integer
+                          tls:
+                            type: integer
+                          cors:
+                            type: integer
+                          rateLimit:
+                            type: integer
+                          promptGuard:
+                            type: integer
+                          toolScope:
+                            type: integer
+                          hardenedDeployment:
+                            type: integer
+                      relatedResources:
+                        type: object
+                        properties:
+                          gateways:
+                            type: integer
+                          backends:
+                            type: integer
+                          policies:
+                            type: integer
+                          routes:
+                            type: integer
+                verifiedCatalogScores:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      catalogName:
+                        type: string
+                      namespace:
+                        type: string
+                      resourceVersion:
+                        type: string
+                      status:
+                        type: string
+                        enum: ["Verified", "Unverified", "Rejected", "Pending"]
+                      compositeScore:
+                        type: integer
+                      securityScore:
+                        type: integer
+                      trustScore:
+                        type: integer
+                      complianceScore:
+                        type: integer
+                      lastScored:
+                        type: string
+                        format: date-time
+                      checks:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            points:
+                              type: integer
+                            maxPoints:
+                              type: integer
+                skillCatalogScores:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                      version:
+                        type: string
+                      category:
+                        type: string
+                      repoURL:
+                        type: string
+                      websiteUrl:
+                        type: string
+                      score:
+                        type: integer
+                        minimum: 0
+                        maximum: 100
+                      status:
+                        type: string
+                        enum: ["pass", "warning", "fail"]
+                      scannedFiles:
+                        type: integer
+                      securityScanned:
+                        type: boolean
+                      findings:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            checkID:
+                              type: string
+                            severity:
+                              type: string
+                              enum: ["Critical", "High", "Medium", "Low"]
+                            category:
+                              type: string
+                            title:
+                              type: string
+                            remediation:
+                              type: string
+                            filePath:
+                              type: string
+                            line:
+                              type: integer
+                            matchedPattern:
+                              type: string

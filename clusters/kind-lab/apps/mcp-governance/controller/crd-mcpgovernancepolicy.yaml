@@ -1,0 +1,272 @@
+---
+# Fixed MCPGovernancePolicy CRD — upstream chart's
+# crds/mcpgovernancepolicies.yaml has duplicate YAML keys under
+# spec.versions[0].schema.openAPIV3Schema.properties.spec:
+# the status fields (phase, clusterScore, lastEvaluationTime, conditions)
+# are stuffed inside spec.properties.spec as a SECOND `type: object` +
+# `properties:` block at the same indentation.
+#
+# YAML parsers silently overwrite duplicate keys → the first block (with
+# all 20 spec fields) is discarded, only the 4 status fields survive in
+# the schema. kube-apiserver then rejects any MCPGovernancePolicy CR with
+# `field not declared in schema` for every spec field.
+#
+# This file restores the correct schema by placing status fields under
+# spec.properties.status (sibling to spec.properties.spec) — both blocks
+# survive, all 20 spec fields are settable, status subresource has proper
+# schema.
+#
+# HelmRelease uses crds: Skip to avoid the upstream broken CRD overwriting
+# this one. Upstream issue: techwithhuz/mcp-security-governance#27.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: mcpgovernancepolicies.governance.mcp.io
+  labels:
+    app.kubernetes.io/name: mcp-governance
+    app.kubernetes.io/part-of: kagent-flux-lab
+spec:
+  group: governance.mcp.io
+  scope: Cluster
+  names:
+    plural: mcpgovernancepolicies
+    singular: mcpgovernancepolicy
+    kind: MCPGovernancePolicy
+    shortNames:
+      - mgp
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Score
+          type: integer
+          jsonPath: .status.clusterScore
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Last Evaluated
+          type: string
+          jsonPath: .status.lastEvaluationTime
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                requireAgentGateway:
+                  type: boolean
+                  default: true
+                  description: "Enforces that all MCP servers must route through agentgateway"
+                requireCORS:
+                  type: boolean
+                  default: true
+                  description: "Enforces CORS policy on all MCP endpoints"
+                requireJWTAuth:
+                  type: boolean
+                  default: true
+                  description: "Enforces JWT authentication on all MCP endpoints"
+                requireRBAC:
+                  type: boolean
+                  default: true
+                  description: "Enforces CEL-based RBAC rules on MCP tool access"
+                requirePromptGuard:
+                  type: boolean
+                  default: false
+                  description: "Enforces prompt guard policies on AI backends"
+                requireTLS:
+                  type: boolean
+                  default: true
+                  description: "Enforces TLS on all MCP connections"
+                requireRateLimit:
+                  type: boolean
+                  default: false
+                  description: "Enforces rate limiting on MCP endpoints"
+                requireHardenedDeployment:
+                  type: boolean
+                  default: true
+                  description: "Enforces container security context, NetworkPolicy coverage, and image hygiene checks"
+                scanInterval:
+                  type: string
+                  default: "5m"
+                  description: "Interval between governance scans (e.g. '30s', '5m', '10m', '1h')"
+                enableAuditLogging:
+                  type: boolean
+                  default: false
+                  description: "Tier 2 #16: emit structured JSON audit events to stdout on every evaluation"
+                clusterName:
+                  type: string
+                  description: "Tier 2 #16: cluster identifier included in audit log events"
+                maxToolsWarning:
+                  type: integer
+                  default: 10
+                  description: "Warning threshold for number of tools per MCP server (0 = disabled)"
+                maxToolsCritical:
+                  type: integer
+                  default: 15
+                  description: "Critical threshold for number of tools per MCP server (0 = disabled)"
+                scoringWeights:
+                  type: object
+                  properties:
+                    agentGatewayIntegration:
+                      type: integer
+                      default: 25
+                    authentication:
+                      type: integer
+                      default: 20
+                    authorization:
+                      type: integer
+                      default: 15
+                    corsPolicy:
+                      type: integer
+                      default: 10
+                    tlsEncryption:
+                      type: integer
+                      default: 10
+                    promptGuard:
+                      type: integer
+                      default: 10
+                    rateLimit:
+                      type: integer
+                      default: 5
+                    toolScope:
+                      type: integer
+                      default: 5
+                    hardenedDeployment:
+                      type: integer
+                      default: 15
+                severityPenalties:
+                  type: object
+                  description: "Point deductions per finding severity level"
+                  properties:
+                    critical:
+                      type: integer
+                      default: 40
+                    high:
+                      type: integer
+                      default: 25
+                    medium:
+                      type: integer
+                      default: 15
+                    low:
+                      type: integer
+                      default: 5
+                targetNamespaces:
+                  type: array
+                  description: "Namespaces to monitor. If empty, all namespaces are monitored."
+                  items:
+                    type: string
+                excludeNamespaces:
+                  type: array
+                  description: "Namespaces to exclude from monitoring. Applied after targetNamespaces."
+                  items:
+                    type: string
+                aiAgent:
+                  type: object
+                  description: "AI agent configuration for AI-driven governance scoring"
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: false
+                    provider:
+                      type: string
+                      default: "gemini"
+                      enum:
+                        - gemini
+                        - ollama
+                    model:
+                      type: string
+                      default: "gemini-2.5-flash"
+                    ollamaEndpoint:
+                      type: string
+                      default: "http://localhost:11434"
+                    scanInterval:
+                      type: string
+                      default: "5m"
+                    scanEnabled:
+                      type: boolean
+                      default: true
+                verifiedCatalogScoring:
+                  type: object
+                  description: "Scoring configuration for Verified Catalog (MCPServerCatalog inventory)."
+                  properties:
+                    securityWeight:
+                      type: integer
+                      default: 50
+                    trustWeight:
+                      type: integer
+                      default: 30
+                    complianceWeight:
+                      type: integer
+                      default: 20
+                    verifiedThreshold:
+                      type: integer
+                      default: 70
+                    unverifiedThreshold:
+                      type: integer
+                      default: 50
+                    checkMaxScores:
+                      type: object
+                      additionalProperties:
+                        type: integer
+                skillGovernance:
+                  type: object
+                  description: "Skill Governance configuration for SkillCatalog CRs."
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+                    scanRepoContent:
+                      type: boolean
+                      default: false
+                    githubToken:
+                      type: string
+                    scanCacheTTLMinutes:
+                      type: integer
+                      default: 60
+                    failOnPromptInjection:
+                      type: boolean
+                      default: true
+                    failOnPrivilegeEscalation:
+                      type: boolean
+                      default: true
+                    allowedExternalDomains:
+                      type: array
+                      items:
+                        type: string
+                    requireSafetyGuardrails:
+                      type: array
+                      items:
+                        type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                clusterScore:
+                  type: integer
+                lastEvaluationTime:
+                  type: string
+                  format: date-time
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
