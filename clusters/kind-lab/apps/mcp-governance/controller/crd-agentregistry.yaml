@@ -1,0 +1,93 @@
+---
+# Stub CRDs for agentregistry.dev/v1alpha1 — MCPG controller watches these
+# but they live in a separate (not yet open-source) project. Without them
+# the controller logs "Failed to watch ... mcpservercatalogs" every ~30s.
+#
+# Schema is permissive (x-kubernetes-preserve-unknown-fields) because the
+# upstream agentregistry.dev project has not published a CRD definition.
+# We accept any shape so the controller's SkillCatalog / MCPServerCatalog
+# scoring features can iterate over CRs without our stub blocking them.
+#
+# When upstream eventually publishes proper CRDs, delete this file and
+# point Flux at theirs.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: skillcatalogs.agentregistry.dev
+  labels:
+    app.kubernetes.io/part-of: kagent-flux-lab
+    kagent-flux-lab.io/stub: "true"
+spec:
+  group: agentregistry.dev
+  scope: Namespaced
+  names:
+    plural: skillcatalogs
+    singular: skillcatalog
+    kind: SkillCatalog
+    shortNames:
+      - sc
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          x-kubernetes-preserve-unknown-fields: true
+          properties:
+            spec:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+      additionalPrinterColumns:
+        - name: Category
+          type: string
+          jsonPath: .spec.category
+        - name: Version
+          type: string
+          jsonPath: .spec.version
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: mcpservercatalogs.agentregistry.dev
+  labels:
+    app.kubernetes.io/part-of: kagent-flux-lab
+    kagent-flux-lab.io/stub: "true"
+spec:
+  group: agentregistry.dev
+  scope: Namespaced
+  names:
+    plural: mcpservercatalogs
+    singular: mcpservercatalog
+    kind: MCPServerCatalog
+    shortNames:
+      - mcs
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          x-kubernetes-preserve-unknown-fields: true
+          properties:
+            spec:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+      additionalPrinterColumns:
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp

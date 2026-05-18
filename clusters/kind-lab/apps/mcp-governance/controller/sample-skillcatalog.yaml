@@ -1,0 +1,28 @@
+---
+# Sample SkillCatalog — exercises MCPG's skill governance scoring branch.
+# Copied verbatim from upstream examples/safe-skills/skill-catalog.yaml.
+# When MCPG controller discovers this, it scans the referenced repo for
+# skill files and scores them against SKL-001 through SKL-SEC-006 checks
+# (prompt injection, privilege escalation, safety guardrails).
+#
+# Lives in mcp-governance ns rather than default — keeps scoring scope
+# contained. excludeNamespaces in policy.yaml lists kube-system + flux-
+# system but NOT mcp-governance, so this CR is in-scope.
+apiVersion: agentregistry.dev/v1alpha1
+kind: SkillCatalog
+metadata:
+  name: safe-skills-example
+  namespace: mcp-governance
+  labels:
+    agentregistry.dev/resource-uid: safe-skills-example
+    app.kubernetes.io/part-of: kagent-flux-lab
+  annotations:
+    description: "Demo catalog from upstream MCPG project — fully compliant skills"
+spec:
+  version: "1.2.0"
+  category: "productivity"
+  description: "Reference implementation of MCP-G compliant skills — automation and database helpers with full safety guardrails"
+  repository:
+    source: github
+    url: https://github.com/techwithhuz/mcp-security-governance
+  websiteUrl: https://github.com/techwithhuz/mcp-security-governance/tree/main/examples/safe-skills/skills

@@ -5,8 +5,15 @@ resources:
   # (also in this Kustomization) can validate against the schema.
   - crd-mcpgovernancepolicy.yaml
   - crd-governanceevaluation.yaml
+  # Stub CRDs for agentregistry.dev (SkillCatalog, MCPServerCatalog) —
+  # the upstream project that defines them hasn't published a chart yet,
+  # so we provide permissive stubs to silence controller log spam and
+  # activate the SkillCatalog scoring branch.
+  - crd-agentregistry.yaml
   # Source + release.
   - helmrepository.yaml
   - helmrelease.yaml
   # Cluster-level policy CR — applied to drive the scoring engine.
   - policy.yaml
+  # Sample SkillCatalog exercising MCPG's skill governance scoring.
+  - sample-skillcatalog.yaml
