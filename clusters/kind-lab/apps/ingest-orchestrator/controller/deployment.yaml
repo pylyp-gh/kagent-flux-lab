@@ -30,13 +30,13 @@ spec:
         - name: orchestrator
           # Multi-arch (linux/amd64, linux/arm64) built by GitHub Actions on
           # push to main; pinned by commit SHA for GitOps immutability.
-          # Lab 4 макс image (team coordinator): delegate_to_kagent_peer
-          # exposes 7 kagent A2A peers (writer-agent, doc-agent, k8s-agent,
-          # helm-agent, istio-agent, observability-agent, promql-agent).
-          # Claude can decompose a multi-domain user request into parallel
-          # delegations, then aggregate replies. A2A team coordination
-          # over JSON-RPC v0.3.0.
-          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-6011917
+          # Lab 4 макс image (team coordinator + extended timeouts):
+          # delegate_to_kagent_peer exposes 7 kagent A2A peers. Claude can
+          # decompose a multi-domain user request into parallel delegations,
+          # then aggregate replies. Per-peer timeout 180s; server WriteTimeout
+          # 600s — handles long multi-agent meta-analysis tasks (cluster
+          # state + docs Qdrant search + helm + cross-reference synthesis).
+          image: ghcr.io/pylyp-gh/ingest-orchestrator:sha-30acefd
           imagePullPolicy: IfNotPresent
           args:
             - "--http"
