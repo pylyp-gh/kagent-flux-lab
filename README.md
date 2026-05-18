@@ -437,6 +437,7 @@ the gateway with the `*.ash.ph.lab` wildcard cert.
 | `https://querydoc.ash.ph.lab/mcp`   | querydoc MCP endpoint    | none (programmatic)                 |
 | `https://doc-writer.ash.ph.lab/mcp` | doc-writer MCP endpoint  | none (programmatic)                 |
 | `https://ingest.ash.ph.lab`         | ingest-orchestrator A2A  | none (programmatic)                 |
+| `https://ingest.ash.ph.lab/ui`      | A2A Playground (browser) | none                                |
 
 **Headlamp token** (Headlamp 0.40+ removed anonymous access):
 
@@ -448,6 +449,161 @@ kubectl -n headlamp create token headlamp --duration=168h | pbcopy
 per week. RBAC is bound to the built-in `view` ClusterRole (read-only; Secrets,
 kagent CRDs, and Gateway API resources deliberately excluded from `view`
 aggregation).
+
+## Testing the orchestrator
+
+The ingest-orchestrator exposes three test surfaces, all sharing the same
+hostname `ingest.ash.ph.lab` and the same underlying agent loop. Choose based on
+whether you want a click-friendly UI, a scriptable invocation, or to exercise
+the full A2A streaming + Elicitation respond flow.
+
+### Browser playground — `/ui`
+
+Open <https://ingest.ash.ph.lab/> (auto-redirects to `/ui`). Single-page HTML
+embedded into the orchestrator binary — no separate frontend service, no CORS
+setup, no build step.
+
+The page fetches `/.well-known/agent-card.json` at load and renders example
+buttons dynamically from `AgentSkill.examples[]` (per A2A spec). Edit examples
+in `internal/agentcard/card.go` and the next deploy auto-propagates them to the
+UI **and** external A2A clients — single source of truth.
+
+Layout:
+
+- Agent description + 7-peer enum badges
+- Textarea for the prompt
+- Submit button → POST `/messages` → pretty-printed agent reply
+- Footer links: Agent Card JSON, source repo, A2A spec
+
+### Curl flows
+
+**1. Agent Card discovery** (A2A spec entry point):
+
+```sh
+curl -s --cacert /tmp/lab-ca.crt https://ingest.ash.ph.lab/.well-known/agent-card.json | jq
+```
+
+Returns skills, capabilities (`streaming: true`), service endpoint, and example
+queries — what external A2A peers consume at first contact.
+
+**2. Sync invocation** — single-shot tool-use loop:
+
+```sh
+curl -s --cacert /tmp/lab-ca.crt -X POST https://ingest.ash.ph.lab/messages \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "message": {
+      "role": "user",
+      "content": [{"type": "text", "text": "Запиши документацію: A2A — це протокол комунікації між агентами."}]
+    }
+  }' | jq '.history[-1].content[0].text'
+```
+
+Claude reasons over the request, optionally fires `add_document` or
+`delegate_to_kagent_peer`, and returns the synthesised reply.
+
+**3. Multi-agent decomposition** — Lab 4 макс showcase:
+
+```sh
+curl -s --cacert /tmp/lab-ca.crt --max-time 480 -X POST https://ingest.ash.ph.lab/messages \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "message": {
+      "role": "user",
+      "content": [{"type": "text", "text": "Дослідь інфраструктуру і документацію та знайди gaps. 1) k8s-agent: стан кластеру. 2) helm-agent: всі releases. 3) doc-agent: що описано у Qdrant. Cross-reference: знайди running-but-undocumented + documented-but-not-running."}]
+    }
+  }' > /tmp/research.json && jq -r '.history[-1].content[0].text' /tmp/research.json
+```
+
+Claude decomposes into 3 parallel delegations to specialist kagent peers,
+collects their replies, and synthesises a gap-analysis table. Total runtime ~5
+min (each peer takes 30-120s for its internal Sampling + Qdrant + LLM completion
+path). The orchestrator's `WriteTimeout: 600s` and peer `ElicitTimeout: 180s`
+bound the upper limits.
+
+**4. SSE streaming + elicit respond** — Phase 4 capability:
+
+Terminal 1 (open SSE stream):
+
+```sh
+curl -N --cacert /tmp/lab-ca.crt -X POST https://ingest.ash.ph.lab/messages:stream \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "message": {
+      "role": "user",
+      "content": [{"type": "text", "text": "Додай документ: <hash-different but cosine-similar text from earlier ingest>"}]
+    }
+  }'
+```
+
+Stream emits:
+
+```
+data: {"task_id":"...","status":"WORKING"}
+
+data: {"correlation_id":"abc-123","status":"input-required","message":"Similar document found (cosine score=0.97)...","schema":{...}}
+```
+
+Stream blocks on the `input-required` event. Terminal 2 (peer answers):
+
+```sh
+curl -X POST --cacert /tmp/lab-ca.crt https://ingest.ash.ph.lab/messages:respond \
+  -H 'Content-Type: application/json' \
+  -d '{"correlation_id":"abc-123","action":"accept","content":{"choice":"new_version"}}'
+```
+
+Terminal 1 unblocks, stream continues with `WORKING` and final `COMPLETED`
+events. Demonstrates real human-in-the-loop a2a coordination over HTTP + SSE
+without WebSocket complexity. See
+[`internal/a2a/streaming.go`](https://github.com/pylyp-gh/ingest-orchestrator/blob/main/internal/a2a/streaming.go)
+and the Obsidian
+[`2026-05-18-mcp-elicitation-via-a2a-sse-bridge`](https://github.com/pylyp-gh/ingest-orchestrator/blob/main/internal/a2a/streaming.go)
+deep-dive for the architectural rationale.
+
+### Test scenarios — what to look for
+
+**Scenario A: Single delegation** Prompt: _"Скільки pods running у namespace
+kagent?"_ Expected: orchestrator fires one
+`delegate_to_kagent_peer(agent_name="k8s-agent", text=...)`. Total ~20-30s.
+Reply table з pod counts.
+
+**Scenario B: Multi-agent meta-analysis (gap finding)** Prompt: _(see flow 3
+above — 3-agent decomposition)_ Expected: three `[peer]` log lines in the
+orchestrator pod, each ~30-120s. Final reply: cross-reference table з GAP Type 1
+(running but undocumented), GAP Type 2 (documented but not running — Roadmap
+items), GAP Type 3 (inconsistencies). Real example output verified on
+2026-05-18: agent correctly identified `doc-writer`, `ingest-orchestrator`,
+`mcp-governance` namespaces as undocumented (because Qdrant collection was
+seeded in Lab 2, before Lab 3/4 components existed).
+
+**Scenario C: Direct ingest with Sampling** Prompt: _"Запиши документацію:
+<some new technical text>"_ Expected: orchestrator chooses `add_document` (its
+own MCP path, faster). Log lines: `[sampling] in:` × 2 (verdict + metadata),
+`[sampling] out:` × 2. Reply з point ID + extracted metadata. Sampling
+round-trips through Claude via gateway.
+
+**Scenario D: Delegation through writer-agent** Prompt: _"Делегуй writer-agent
+додавання цього документа: ..."_ Expected: orchestrator fires
+`delegate_to_kagent_peer(agent_name="writer-agent")`. Writer-agent's kagent
+runtime does NOT advertise Sampling capability; with `ENABLE_SAMPLING=true` on
+doc-writer-mcp the L5 gate fails and writer-agent gracefully reports the block.
+Demonstrates capability negotiation cascade.
+
+### Inspecting live behaviour
+
+```sh
+# Orchestrator agent loop + peer call lines
+POD=$(kubectl -n ingest-orchestrator get pod -l app.kubernetes.io/name=ingest-orchestrator -o jsonpath='{.items[0].metadata.name}')
+kubectl -n ingest-orchestrator logs -f "$POD" | grep -vE 'GET /healthz'
+
+# Watch downstream kagent peer being invoked
+kubectl -n kagent logs -f deployment/k8s-agent
+```
+
+`[agent] tool call: ...` lines show Claude's tool-selection decisions;
+`[peer] POST ... (agent=X)` lines show real A2A delegations; `[sampling]` and
+`[elicit]` lines show server-initiated callbacks routing through the
+orchestrator's MCP client.
 
 ## Key learnings & gotchas
 
