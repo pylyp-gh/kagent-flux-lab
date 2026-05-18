@@ -1,0 +1,34 @@
+---
+# HTTPRoute exposing the kagent writer-agent's native A2A endpoint via
+# the shared agentgateway-proxy Gateway. Hostname `writer-agent.ash.ph.lab`
+# resolves via the wildcard *.ash.ph.lab DNS entry.
+#
+# Why expose this externally — Lab 4 макс / true a2a coordination:
+#   - Every kagent Agent CRD ships a built-in A2A server on its own
+#     Service:8080. Agent Card at /.well-known/agent-card.json,
+#     JSON-RPC `message/send` for invocation, streaming via
+#     stateTransitionHistory.
+#   - Exposing this lets external peers (curl, other agents from another
+#     cluster, IDE plugins) discover and invoke writer-agent directly.
+#   - The orchestrator's internal `delegate_to_writer_agent` tool uses
+#     in-cluster DNS (writer-agent.kagent.svc.cluster.local) instead —
+#     faster, no TLS hop. The external route is for cross-cluster /
+#     cross-org A2A peers.
+#
+# Wildcard cert *.ash.ph.lab covers the SNI; agentgateway terminates TLS
+# at port 443 and forwards plain HTTP to writer-agent Service:8080.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: writer-agent-a2a
+  namespace: kagent
+spec:
+  parentRefs:
+    - name: agentgateway-proxy
+      namespace: agentgateway-system
+  hostnames:
+    - writer-agent.ash.ph.lab
+  rules:
+    - backendRefs:
+        - name: writer-agent
+          port: 8080
